@@ -1,0 +1,6 @@
+[submodule "www"]
+	path = www
+	url = ./www
+[submodule "metaserver"]
+	path = metaserver
+	url = ./metaserver
