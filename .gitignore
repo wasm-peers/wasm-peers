@@ -1,3 +1,6 @@
+.idea
+.vs
+
 /target
 **/*.rs.bk
 Cargo.lock
