@@ -11,36 +11,90 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = "0.2.63"
-js-sys = "*"
-wasm-bindgen-futures = "*"
-
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
-console_error_panic_hook = { version = "0.1.6", optional = true }
-
-# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
-# compared to the default allocator's ~10K. It is slower than the default
-# allocator, however.
-#
-# Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.5", optional = true }
+console_error_panic_hook = { version = "0.1.6", optional = true }
+wasm-bindgen = "0.2.63"
+js-sys = "0.3.39"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.53"
+base64 = "0.13"
+wasm-bindgen-futures = "0.4.13"
+hmac-sha256 = "1"
+hex = "0.4.2"
 
 [dependencies.web-sys]
 version = "0.3.22"
 features = [
-  "MessageEvent",
-  "RtcPeerConnection",
-  "RtcSignalingState",
-  "RtcSdpType",
-  "RtcSessionDescriptionInit",
-  "RtcPeerConnectionIceEvent",
-  "RtcIceCandidate",
-  "RtcDataChannel",
-  "RtcDataChannelEvent",
+  'console',
+  'Document',
+  'Element',
+  'HtmlElement',
+  'Node',
+  'Window',
+  'RtcAnswerOptions',
+  'RtcCertificate',
+  'RtcCertificateExpiration',
+  'RtcCodecStats',
+  'RtcConfiguration',
+  'RtcDataChannel',
+  'RtcDataChannelEvent',
+  'RtcDataChannelEventInit',
+  'RtcDataChannelInit',
+  'RtcDataChannelState',
+  'RtcFecParameters',
+  'RtcIceCandidate',
+  'RtcIceCandidateInit',
+  'RtcIceCandidatePairStats',
+  'RtcIceCandidateStats',
+  'RtcIceComponentStats',
+  'RtcIceServer',
+  'RtcIdentityAssertion',
+  'RtcIdentityAssertionResult',
+  'RtcIdentityProvider',
+  'RtcIdentityProviderDetails',
+  'RtcIdentityProviderOptions',
+  'RtcIdentityProviderRegistrar',
+  'RtcIdentityValidationResult',
+  'RtcInboundRtpStreamStats',
+  'RtcMediaStreamStats',
+  'RtcMediaStreamTrackStats',
+  'RtcOfferAnswerOptions',
+  'RtcOfferOptions',
+  'RtcOutboundRtpStreamStats',
+  'RtcPeerConnection',
+  'RtcPeerConnectionIceEvent',
+  'RtcPeerConnectionIceEventInit',
+  'RtcRtcpParameters',
+  'RtcRtpCodecParameters',
+  'RtcRtpContributingSource',
+  'RtcRtpEncodingParameters',
+  'RtcRtpHeaderExtensionParameters',
+  'RtcRtpParameters',
+  'RtcRtpReceiver',
+  'RtcRtpSender',
+  'RtcRtpSourceEntry',
+  'RtcRtpSynchronizationSource',
+  'RtcRtpTransceiver',
+  'RtcRtpTransceiverInit',
+  'RtcRtxParameters',
+  'RtcSessionDescription',
+  'RtcSessionDescriptionInit',
+  'RtcStats',
+  'RtcStatsReport',
+  'RtcStatsReportInternal',
+  'RtcTrackEvent',
+  'RtcTrackEventInit',
+  'RtcTransportStats',
+  'RtcIceConnectionState',
+  'RtcIceGatheringState',
+  'RtcSdpType',
+  'RtcdtmfSender',
+  'RtcdtmfToneChangeEvent',
+  'RtcdtmfToneChangeEventInit',
+  'RtcrtpContributingSourceStats',
+  'HtmlDocument',
 ]
+
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
