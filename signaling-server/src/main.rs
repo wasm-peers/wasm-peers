@@ -2,14 +2,14 @@ use std::env;
 
 use warp::Filter;
 
-use string_metric_server::server::{user_connected, Connections};
+use rusty_games_signaling_server::server::{user_connected, Connections};
 
 #[tokio::main]
 async fn main() {
     let connections = Connections::default();
     let connections = warp::any().map(move || connections.clone());
 
-    let string_metric =
+    let signaling =
         warp::path("ws")
             .and(warp::ws())
             .and(connections)
@@ -22,5 +22,5 @@ async fn main() {
         None => 8080,
     };
 
-    warp::serve(string_metric).run(([127, 0, 0, 1], port)).await;
+    warp::serve(signaling).run(([127, 0, 0, 1], port)).await;
 }

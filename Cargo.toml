@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "library",
+    "signaling-server",
+    "protocol",
+]
