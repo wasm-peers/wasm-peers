@@ -1,0 +1,42 @@
+[package]
+name = "rusty-games-library"
+version = "0.1.0"
+authors = ["Tomek Karwowski <to.karwowski@gmail.com>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde-json-wasm = "0.3.1"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+log = "0.4"
+wasm-logger = "0.2"
+
+rusty-games-protocol = {path = "../protocol"}
+
+[dependencies.web-sys]
+version = "0.3.22"
+features = [
+    "console",
+
+    # WebRTC features
+    "MessageEvent",
+    "RtcPeerConnection",
+    "RtcSignalingState",
+    "RtcSdpType",
+    "RtcSessionDescriptionInit",
+    "RtcPeerConnectionIceEvent",
+    "RtcIceConnectionState",
+    "RtcIceCandidate",
+    "RtcDataChannel",
+    "RtcDataChannelEvent",
+    "RtcConfiguration",
+
+    # WebSocket features
+    "WebSocket",
+    "BinaryType",
+]

@@ -4,10 +4,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
+use log::{error, info};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
-use log::{error, info};
 
 use rusty_games_protocol::{SessionId, SignalMessage};
 
@@ -17,7 +17,6 @@ pub struct Session {
     pub first: UserId,
     pub second: Option<UserId>,
 }
-
 
 pub type Connections = Arc<RwLock<HashMap<UserId, mpsc::UnboundedSender<Message>>>>;
 pub type Sessions = Arc<RwLock<HashMap<SessionId, Session>>>;
@@ -60,20 +59,28 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
     connections.write().await.remove(&id);
 }
 
-async fn user_message(user_id: UserId, msg: Message, connections: &Connections, sessions: &Sessions) {
+async fn user_message(
+    user_id: UserId,
+    msg: Message,
+    connections: &Connections,
+    sessions: &Sessions,
+) {
     if let Ok(msg) = msg.to_str() {
         match serde_json::from_str::<SignalMessage>(msg) {
             Ok(request) => {
                 match request {
                     // on first user in session - create session object and store connecting user id
                     // on second user - add him to existing session
-                    SignalMessage::NewConnection(session_id) => {
+                    SignalMessage::SessionStartOrJoin(session_id) => {
                         match sessions.write().await.entry(session_id) {
                             Entry::Occupied(mut entry) => {
                                 entry.get_mut().second = Some(user_id);
                             }
                             Entry::Vacant(entry) => {
-                                entry.insert(Session { first: user_id, second: None });
+                                entry.insert(Session {
+                                    first: user_id,
+                                    second: None,
+                                });
                             }
                         }
                     }
@@ -81,13 +88,18 @@ async fn user_message(user_id: UserId, msg: Message, connections: &Connections, 
                     SignalMessage::SdpOffer(offer, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
-                                let recipient = if user_id == session.first { session.second } else { Some(session.first) };
+                                let recipient = if user_id == session.first {
+                                    session.second
+                                } else {
+                                    Some(session.first)
+                                };
                                 match recipient {
                                     Some(recipient_id) => {
                                         let response = SignalMessage::SdpOffer(offer, session_id);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
-                                        let recipient_tx = connections_reader.get(&recipient_id).unwrap();
+                                        let recipient_tx =
+                                            connections_reader.get(&recipient_id).unwrap();
 
                                         recipient_tx.send(Message::text(response));
                                     }
@@ -105,13 +117,18 @@ async fn user_message(user_id: UserId, msg: Message, connections: &Connections, 
                     SignalMessage::SdpAnswer(answer, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
-                                let recipient = if user_id == session.first { session.second } else { Some(session.first) };
+                                let recipient = if user_id == session.first {
+                                    session.second
+                                } else {
+                                    Some(session.first)
+                                };
                                 match recipient {
                                     Some(recipient_id) => {
                                         let response = SignalMessage::SdpAnswer(answer, session_id);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
-                                        let recipient_tx = connections_reader.get(&recipient_id).unwrap();
+                                        let recipient_tx =
+                                            connections_reader.get(&recipient_id).unwrap();
 
                                         recipient_tx.send(Message::text(response));
                                     }
@@ -128,13 +145,19 @@ async fn user_message(user_id: UserId, msg: Message, connections: &Connections, 
                     SignalMessage::IceCandidate(candidate, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
-                                let recipient = if user_id == session.first { session.second } else { Some(session.first) };
+                                let recipient = if user_id == session.first {
+                                    session.second
+                                } else {
+                                    Some(session.first)
+                                };
                                 match recipient {
                                     Some(recipient_id) => {
-                                        let response = SignalMessage::IceCandidate(candidate, session_id);
+                                        let response =
+                                            SignalMessage::IceCandidate(candidate, session_id);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
-                                        let recipient_tx = connections_reader.get(&recipient_id).unwrap();
+                                        let recipient_tx =
+                                            connections_reader.get(&recipient_id).unwrap();
 
                                         recipient_tx.send(Message::text(response));
                                     }
@@ -151,12 +174,8 @@ async fn user_message(user_id: UserId, msg: Message, connections: &Connections, 
                     _ => {}
                 }
             }
-            Err(e) => {
-                if let Some(tx) = connections.read().await.get(&user_id) {
-                    let response = serde_json::to_string(&SignalMessage::Error(e.to_string()))
-                        .expect("failed to serialize error response");
-                    tx.send(Message::text(response)).unwrap();
-                }
+            Err(error) => {
+                error!("An error occurred: {:?}", error);
             }
         }
     }

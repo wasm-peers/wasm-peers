@@ -1,6 +1,6 @@
-use std::env;
 use log::LevelFilter;
-use simplelog::{Config, TerminalMode, TermLogger};
+use simplelog::{Config, TermLogger, TerminalMode};
+use std::env;
 
 use warp::Filter;
 
@@ -16,14 +16,13 @@ async fn main() {
     let sessions = Sessions::default();
     let sessions = warp::any().map(move || sessions.clone());
 
-    let signaling =
-        warp::path("ws")
-            .and(warp::ws())
-            .and(connections)
-            .and(sessions)
-            .map(|ws: warp::ws::Ws, connections, sessions| {
-                ws.on_upgrade(move |socket| user_connected(socket, connections, sessions))
-            });
+    let signaling = warp::path("ws")
+        .and(warp::ws())
+        .and(connections)
+        .and(sessions)
+        .map(|ws: warp::ws::Ws, connections, sessions| {
+            ws.on_upgrade(move |socket| user_connected(socket, connections, sessions))
+        });
 
     let port = match env::args().nth(1) {
         Some(s) => s.parse::<u16>().unwrap(),
