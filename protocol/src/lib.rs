@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-type SessionId = String;
-type StdOffer = String;
+pub type SessionId = String;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SignalMessage {
+    NewConnection(SessionId),
     SdpOffer(String, SessionId),
     SdpAnswer(String, SessionId),
     IceCandidate(String, SessionId),
-    IceError(String, SessionId),
+    Error(String),
 }
