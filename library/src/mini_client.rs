@@ -7,16 +7,16 @@ use crate::common::create_peer_connection;
 use web_sys::{console, RtcDataChannel};
 use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcPeerConnectionIceEvent};
 
-pub struct Client {
+pub struct MiniClient {
     peer_connection: RtcPeerConnection,
     data_channel: Option<RtcDataChannel>,
 }
 
-impl Client {
+impl MiniClient {
     pub fn new() -> Result<Rc<RefCell<Self>>, JsValue> {
         let peer_connection = create_peer_connection()?;
 
-        let client = Rc::new(RefCell::new(Client {
+        let client = Rc::new(RefCell::new(MiniClient {
             peer_connection,
             data_channel: None,
         }));

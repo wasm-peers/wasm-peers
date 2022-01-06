@@ -11,13 +11,13 @@ use web_sys::{MessageEvent, RtcPeerConnection, RtcPeerConnectionIceEvent};
 
 use crate::common::{create_peer_connection, create_sdp_offer, WS_IP_PORT};
 
-pub struct Server {
+pub struct MiniServer {
     peer_connection: RtcPeerConnection,
     data_channel: RtcDataChannel,
     session_id: String,
 }
 
-impl Server {
+impl MiniServer {
     pub fn start(session_id: String) -> Result<Rc<RefCell<Self>>, JsValue> {
         let peer_connection = create_peer_connection()?;
         info!(
@@ -151,7 +151,7 @@ impl Server {
             onmessage_closure.forget();
         }
 
-        Ok(Rc::new(RefCell::new(Server {
+        Ok(Rc::new(RefCell::new(MiniServer {
             peer_connection,
             data_channel,
             session_id,

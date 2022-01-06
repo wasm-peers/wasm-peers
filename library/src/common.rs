@@ -9,7 +9,7 @@ use web_sys::{console, RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
 
 use crate::server::Server;
-use crate::Client;
+use crate::mini_client::MiniClient;
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 

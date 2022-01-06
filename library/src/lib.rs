@@ -1,4 +1,4 @@
-mod client;
+mod mini_client;
 mod common;
 mod mini_server;
 
@@ -6,9 +6,9 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
-use crate::client::Client;
+use crate::mini_client::MiniClient;
+use crate::mini_server::MiniServer;
 use crate::common::set_panic_hook;
-use crate::mini_server::Server;
 
 #[wasm_bindgen]
 extern "C" {
@@ -24,8 +24,8 @@ pub async fn main() -> Result<(), JsValue> {
 
     console::log_1(&"wasm main started".into());
 
-    let server = Server::start("TODO-session-id".to_string())?;
-    let client = Client::new()?;
+    let server = MiniServer::start("TODO-session-id".to_string())?;
+    let client = MiniClient::new()?;
 
     // server
     //     .borrow()
