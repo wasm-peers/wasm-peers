@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use js_sys::{Array, Object, Reflect};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
@@ -56,7 +57,6 @@ pub(crate) async fn create_sdp_offer(
     let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?
         .as_string()
         .unwrap();
-
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     local_session_description.sdp(&offer);
     JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
@@ -68,14 +68,21 @@ pub(crate) async fn create_sdp_answer(
     peer_connection: RtcPeerConnection,
     offer: String,
 ) -> Result<String, JsValue> {
+    debug!("create_sdp_answer");
     let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     remote_session_description.sdp(&offer);
-    JsFuture::from(peer_connection.set_remote_description(&remote_session_description)).await?;
+    let promise = peer_connection.set_remote_description(&remote_session_description);
+    // FIXME: this promise raises an exception
+    JsFuture::from(promise).await?;
+    debug!("set remote description successfully");
 
-    let answer = JsFuture::from(peer_connection.create_answer()).await?;
+    let promise = peer_connection.create_answer();
+    // FIXME: this promise raises an exception too
+    let answer = JsFuture::from(promise).await?;
     let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
         .as_string()
         .unwrap();
+    debug!("created answer successfully: {}", answer);
 
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
     local_session_description.sdp(&answer);

@@ -98,10 +98,12 @@ async fn user_message(
                     }
                     // pass offer to the other user in session without changing anything
                     SignalMessage::SdpOffer(offer, session_id) => {
-                        match sessions.read().await.get(&session_id) {
+                        match sessions.write().await.get_mut(&session_id) {
                             Some(session) => {
                                 if session.offer_received {
                                     warn!("offer already sent by the the peer, ignoring the second offer: {}", session_id);
+                                } else {
+                                    session.offer_received = true;
                                 }
 
                                 let recipient = if user_id == session.first {

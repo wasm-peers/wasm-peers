@@ -4,7 +4,7 @@ use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue, UnwrapThrowExt};
 
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use rusty_games_protocol::{SessionId, SignalMessage};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -69,7 +69,9 @@ impl NetworkManager {
                             websocket_clone,
                             session_id_clone,
                         )
-                        .await
+                        .await.unwrap_or_else(|error| {
+                            error!("error handling websocket message: {:?}", error);
+                        })
                     });
                 }
             }) as Box<dyn FnMut(MessageEvent)>);
@@ -184,7 +186,7 @@ async fn handle_websocket_message(
     peer_connection: RtcPeerConnection,
     websocket: WebSocket,
     session_id: SessionId,
-) {
+) -> Result<(), JsValue> {
     match message {
         SignalMessage::SessionStartOrJoin(session_id) => {
             error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
@@ -192,16 +194,22 @@ async fn handle_websocket_message(
         SignalMessage::SessionReady(session_id) => {
             info!("peer received info that session is ready {}", session_id);
             // TODO: should offer be created on condition of is_server flag?
-            let offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
-            let signal_message = SignalMessage::SessionStartOrJoin(session_id.clone());
+            let offer = create_sdp_offer(peer_connection.clone()).await?;
+            info!("created an offer: {}", offer);
+            let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
             let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-            websocket.send_with_str(&signal_message).unwrap();
+            websocket.send_with_str(&signal_message)?;
+            info!("sent the offer to peer successfully: {}", session_id);
         }
         SignalMessage::SdpOffer(offer, session_id) => {
             info!("received offer from peer: {}, {}", offer, session_id);
             let answer = create_sdp_answer(peer_connection.clone(), offer)
                 .await
-                .unwrap_or_else(|error| panic!("create_sdp_answer error: {:?}", error));
+                .unwrap_or_else(|error| {
+                    error!("create_sdp_answer error: {:?}", error);
+                    panic!();
+                });
+            info!("created an answer: {}", answer);
             let signal_message = SignalMessage::SdpAnswer(answer, session_id);
             let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
             websocket.send_with_str(&signal_message).unwrap();
@@ -236,4 +244,6 @@ async fn handle_websocket_message(
             );
         }
     }
+
+    Ok(())
 }
