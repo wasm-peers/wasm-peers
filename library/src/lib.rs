@@ -11,7 +11,7 @@ use web_sys::console;
 use crate::common::set_panic_hook;
 use crate::mini_client::MiniClient;
 use crate::mini_server::MiniServer;
-use crate::network_manager::NetworkManager;
+use crate::network_manager::{ConnectionType, NetworkManager};
 
 #[wasm_bindgen]
 extern "C" {
@@ -29,12 +29,12 @@ pub async fn main() -> Result<(), JsValue> {
 
     debug!("wasm main started");
 
-    let server = NetworkManager::start("TODO-session-id".to_string())?;
-    let client = NetworkManager::start("TODO-session-id".to_string())?;
+    let server = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local)?;
+    let client = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local)?;
 
     // server
     //     .borrow()
-    //     .send_message("channel is open and send_message works")?;
+    //     .send_message("hello honey, I love you")?;
 
     Ok(())
 }

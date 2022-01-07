@@ -1,6 +1,8 @@
 use log::LevelFilter;
 use simplelog::{Config, TermLogger, TerminalMode};
 use std::env;
+use std::net::SocketAddr;
+use std::str::FromStr;
 
 use warp::Filter;
 
@@ -24,10 +26,10 @@ async fn main() {
             ws.on_upgrade(move |socket| user_connected(socket, connections, sessions))
         });
 
-    let port = match env::args().nth(1) {
-        Some(s) => s.parse::<u16>().unwrap(),
-        None => 8080,
-    };
+    let address = env::args()
+        .nth(1)
+        .unwrap_or_else(|| "127.0.0.1:9001".to_string());
+    let address = SocketAddr::from_str(&address).expect("invalid ip address provided");
 
-    warp::serve(signaling).run(([127, 0, 0, 1], port)).await;
+    warp::serve(signaling).run(address).await;
 }

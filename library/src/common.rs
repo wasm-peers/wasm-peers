@@ -16,12 +16,11 @@ const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
 pub const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
     pub candidate: String,
-    #[allow(non_snake_case)] // this is how the internal field of candidate is named, do not change
     pub sdpMid: String,
-    #[allow(non_snake_case)] // this is how the internal field of candidate is named, do not change
     pub sdpMLineIndex: u16,
 }
 
@@ -36,7 +35,7 @@ pub(crate) fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-pub(crate) fn create_peer_connection() -> Result<RtcPeerConnection, JsValue> {
+pub(crate) fn create_stun_peer_connection() -> Result<RtcPeerConnection, JsValue> {
     let ice_servers = Array::new();
     {
         let server_entry = Object::new();
@@ -73,14 +72,10 @@ pub(crate) async fn create_sdp_answer(
     debug!("create_sdp_answer");
     let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     remote_session_description.sdp(&offer);
-    let promise = peer_connection.set_remote_description(&remote_session_description);
-    // FIXME: this promise raises an exception
-    JsFuture::from(promise).await?;
+    JsFuture::from(peer_connection.set_remote_description(&remote_session_description)).await?;
     debug!("set remote description successfully");
 
-    let promise = peer_connection.create_answer();
-    // FIXME: this promise raises an exception too
-    let answer = JsFuture::from(promise).await?;
+    let answer = JsFuture::from(peer_connection.create_answer()).await?;
     let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
         .as_string()
         .unwrap();

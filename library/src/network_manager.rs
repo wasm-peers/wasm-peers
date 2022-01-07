@@ -7,15 +7,18 @@ use wasm_bindgen::{JsCast, JsValue, UnwrapThrowExt};
 use log::{debug, error, info, warn};
 use rusty_games_protocol::{SessionId, SignalMessage};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{
-    console, RtcDataChannel, RtcIceCandidate, RtcIceCandidateInit, RtcIceConnectionState,
-    RtcSdpType, RtcSessionDescriptionInit, WebSocket,
-};
+use web_sys::{console, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit, RtcIceConnectionState, RtcSdpType, RtcSessionDescriptionInit, WebSocket};
 use web_sys::{MessageEvent, RtcPeerConnection, RtcPeerConnectionIceEvent};
 
 use crate::common::{
-    create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate, WS_IP_PORT,
+    create_stun_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate, WS_IP_PORT,
 };
+
+pub enum ConnectionType {
+    Local,
+    Stun,
+    StunAndTurn,
+}
 
 pub struct NetworkManager {
     peer_connection: RtcPeerConnection,
@@ -24,8 +27,12 @@ pub struct NetworkManager {
 }
 
 impl NetworkManager {
-    pub fn start(session_id: String) -> Result<Rc<RefCell<Self>>, JsValue> {
-        let peer_connection = create_peer_connection()?;
+    pub fn start(session_id: String, connection_type: ConnectionType) -> Result<Rc<RefCell<Self>>, JsValue> {
+        let peer_connection = match connection_type {
+            ConnectionType::Local => RtcPeerConnection::new()?,
+            ConnectionType::Stun => create_stun_peer_connection()?,
+            ConnectionType::StunAndTurn => unimplemented!("no turn server yet!"),
+        };
         info!(
             "peer connections created, states: {:?}",
             peer_connection.signaling_state()
@@ -69,7 +76,8 @@ impl NetworkManager {
                             websocket_clone,
                             session_id_clone,
                         )
-                        .await.unwrap_or_else(|error| {
+                        .await
+                        .unwrap_or_else(|error| {
                             error!("error handling websocket message: {:?}", error);
                         })
                     });
@@ -119,7 +127,9 @@ impl NetworkManager {
             let oniceconnectionstatechange_callback =
                 Closure::wrap(
                     Box::new(move || match peer_connection_clone.ice_connection_state() {
-                        RtcIceConnectionState::Connected => {}
+                        RtcIceConnectionState::Connected => {
+                            info!("peer connection changed state to CONNECTED");
+                        }
                         _ => {}
                     }) as Box<dyn FnMut()>,
                 );
@@ -129,15 +139,28 @@ impl NetworkManager {
             oniceconnectionstatechange_callback.forget();
         }
 
-        let data_channel = peer_connection.create_data_channel("data_channel_1");
-        console::log_1(&format!("data_channel_1 created: label {:?}", data_channel.label()).into());
+        // peer_connection on data channel
+        {
+            let ondatachannel_callback = Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
+                let data_channel = data_channel_event.channel();
+                // TODO: set data channel on network manager
+            }) as Box<dyn FnMut(RtcDataChannelEvent)>);
+            peer_connection.set_ondatachannel(Some(ondatachannel_callback.as_ref().unchecked_ref()));
+            ondatachannel_callback.forget();
+        }
+
+        let data_channel = peer_connection.create_data_channel(&format!("data_channel_{}", &session_id));
+        info!("data_channel created: label {:?}", data_channel.label());
 
         // data_channel.onopen
         {
             let data_channel_clone = data_channel.clone();
-            let onopen_closure = Closure::wrap(Box::new(move |_| {
+            let onopen_callback = Closure::wrap(Box::new(move |_| {
+                info!("data channel is now open!");
                 // TODO: inform server that data channel is open and ready for transmission
             }) as Box<dyn FnMut(JsValue)>);
+            data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+            onopen_callback.forget();
         }
 
         // data_channel.onmessage
@@ -176,7 +199,7 @@ impl NetworkManager {
     }
 
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
-        console::log_1(&format!("server will try to send a message: {:?}", &message).into());
+        info!("server will try to send a message: {:?}", &message);
         self.data_channel.send_with_str(message)
     }
 }
@@ -193,7 +216,8 @@ async fn handle_websocket_message(
         }
         SignalMessage::SessionReady(session_id) => {
             info!("peer received info that session is ready {}", session_id);
-            // TODO: should offer be created on condition of is_server flag?
+            // both peers create an offer and race for whose offer will reach the signaling server first
+            // second offer is ignored by the signaling server
             let offer = create_sdp_offer(peer_connection.clone()).await?;
             info!("created an offer: {}", offer);
             let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
@@ -224,23 +248,20 @@ async fn handle_websocket_message(
         }
         SignalMessage::IceCandidate(ice_candidate, session_id) => {
             info!("peer received ice candidate: {}", &ice_candidate);
-            if ice_candidate.is_empty() {
-                warn!("peer received empty ice candidate, ignoring");
-            } else {
-                let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
+            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
 
-                let mut rtc_candidate = RtcIceCandidateInit::new("");
-                rtc_candidate.candidate(&ice_candidate.candidate);
-                rtc_candidate.sdp_m_line_index(Some(ice_candidate.sdpMLineIndex));
-                rtc_candidate.sdp_mid(Some(&ice_candidate.sdpMid));
+            let mut rtc_candidate = RtcIceCandidateInit::new("");
+            rtc_candidate.candidate(&ice_candidate.candidate);
+            rtc_candidate.sdp_m_line_index(Some(ice_candidate.sdpMLineIndex));
+            rtc_candidate.sdp_mid(Some(&ice_candidate.sdpMid));
 
-                let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).unwrap();
-                JsFuture::from(
-                    peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
-                )
-                    .await
-                    .unwrap();
-            }
+            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).unwrap();
+            JsFuture::from(
+                peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
+            )
+            .await
+            .unwrap();
+            info!("added ice candidate {:?}", ice_candidate);
         }
         SignalMessage::Error(error, session_id) => {
             error!(
