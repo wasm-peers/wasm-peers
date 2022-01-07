@@ -223,19 +223,24 @@ async fn handle_websocket_message(
                 .unwrap();
         }
         SignalMessage::IceCandidate(ice_candidate, session_id) => {
-            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
+            info!("peer received ice candidate: {}", &ice_candidate);
+            if ice_candidate.is_empty() {
+                warn!("peer received empty ice candidate, ignoring");
+            } else {
+                let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
 
-            let mut rtc_candidate = RtcIceCandidateInit::new("");
-            rtc_candidate.candidate(&ice_candidate.candidate);
-            rtc_candidate.sdp_m_line_index(Some(ice_candidate.sdp_m_line_index));
-            rtc_candidate.sdp_mid(Some(&ice_candidate.sdp_m_id));
+                let mut rtc_candidate = RtcIceCandidateInit::new("");
+                rtc_candidate.candidate(&ice_candidate.candidate);
+                rtc_candidate.sdp_m_line_index(Some(ice_candidate.sdpMLineIndex));
+                rtc_candidate.sdp_mid(Some(&ice_candidate.sdpMid));
 
-            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).unwrap();
-            JsFuture::from(
-                peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
-            )
-            .await
-            .unwrap();
+                let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).unwrap();
+                JsFuture::from(
+                    peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
+                )
+                    .await
+                    .unwrap();
+            }
         }
         SignalMessage::Error(error, session_id) => {
             error!(

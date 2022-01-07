@@ -19,8 +19,10 @@ pub const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
     pub candidate: String,
-    pub sdp_m_id: String,
-    pub sdp_m_line_index: u16,
+    #[allow(non_snake_case)] // this is how the internal field of candidate is named, do not change
+    pub sdpMid: String,
+    #[allow(non_snake_case)] // this is how the internal field of candidate is named, do not change
+    pub sdpMLineIndex: u16,
 }
 
 pub(crate) fn set_panic_hook() {

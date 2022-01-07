@@ -7,7 +7,14 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[profile.release]
+debug = true
+
+[features]
+default = ["console_error_panic_hook"]
+
 [dependencies]
+console_error_panic_hook = { version = "0.1.6", optional = true }
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 serde = { version = "1.0", features = ["derive"] }

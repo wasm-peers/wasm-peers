@@ -161,31 +161,35 @@ async fn user_message(
                         }
                     }
                     SignalMessage::IceCandidate(candidate, session_id) => {
-                        match sessions.read().await.get(&session_id) {
-                            Some(session) => {
-                                let recipient = if user_id == session.first {
-                                    session.second
-                                } else {
-                                    Some(session.first)
-                                };
-                                match recipient {
-                                    Some(recipient_id) => {
-                                        let response =
-                                            SignalMessage::IceCandidate(candidate, session_id);
-                                        let response = serde_json::to_string(&response).unwrap();
-                                        let connections_reader = connections.read().await;
-                                        let recipient_tx =
-                                            connections_reader.get(&recipient_id).unwrap();
+                        if candidate.is_empty() {
+                            warn!("received empty ice candidate, ignoring");
+                        } else {
+                            match sessions.read().await.get(&session_id) {
+                                Some(session) => {
+                                    let recipient = if user_id == session.first {
+                                        session.second
+                                    } else {
+                                        Some(session.first)
+                                    };
+                                    match recipient {
+                                        Some(recipient_id) => {
+                                            let response =
+                                                SignalMessage::IceCandidate(candidate, session_id);
+                                            let response = serde_json::to_string(&response).unwrap();
+                                            let connections_reader = connections.read().await;
+                                            let recipient_tx =
+                                                connections_reader.get(&recipient_id).unwrap();
 
-                                        recipient_tx.send(Message::text(response)).unwrap();
-                                    }
-                                    None => {
-                                        error!("Missing second user in session: {}", &session_id);
+                                            recipient_tx.send(Message::text(response)).unwrap();
+                                        }
+                                        None => {
+                                            error!("Missing second user in session: {}", &session_id);
+                                        }
                                     }
                                 }
-                            }
-                            None => {
-                                error!("No such session: {}", &session_id);
+                                None => {
+                                    error!("No such session: {}", &session_id);
+                                }
                             }
                         }
                     }
