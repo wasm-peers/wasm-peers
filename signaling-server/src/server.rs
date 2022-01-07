@@ -84,15 +84,17 @@ async fn user_message(
                             // on second user - add him to existing session and notify users that session is ready
                             Entry::Occupied(mut entry) => {
                                 entry.get_mut().second = Some(user_id);
-                                let response = SignalMessage::SessionReady(session_id);
-                                let response = serde_json::to_string(&response).unwrap();
-                                let connections_reader = connections.read().await;
-                                let recipient_1_tx = connections_reader.get(&user_id).unwrap();
-                                let recipient_2_tx =
-                                    connections_reader.get(&entry.get().first).unwrap();
+                                let first_response = SignalMessage::SessionReady(session_id.clone(), true);
+                                let first_response = serde_json::to_string(&first_response).unwrap();
+                                let second_response = SignalMessage::SessionReady(session_id, false);
+                                let second_response = serde_json::to_string(&second_response).unwrap();
 
-                                recipient_1_tx.send(Message::text(&response)).unwrap();
-                                recipient_2_tx.send(Message::text(response)).unwrap();
+                                let connections_reader = connections.read().await;
+                                let first_tx =
+                                    connections_reader.get(&entry.get().first).unwrap();
+                                first_tx.send(Message::text(first_response)).unwrap();
+                                let second_tx = connections_reader.get(&user_id).unwrap();
+                                second_tx.send(Message::text(&second_response)).unwrap();
                             }
                         }
                     }

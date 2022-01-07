@@ -29,8 +29,8 @@ pub async fn main() -> Result<(), JsValue> {
 
     debug!("wasm main started");
 
-    let server = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local)?;
-    let client = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local)?;
+    let server = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local, true)?;
+    let client = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local, false)?;
 
     // server
     //     .borrow()
