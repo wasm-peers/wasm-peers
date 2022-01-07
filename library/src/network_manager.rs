@@ -21,9 +21,9 @@ pub enum ConnectionType {
 }
 
 pub struct NetworkManager {
-    peer_connection: RtcPeerConnection,
-    data_channel: RtcDataChannel,
     session_id: String,
+    peer_connection: RtcPeerConnection,
+    data_channel: Option<RtcDataChannel>,
 }
 
 impl NetworkManager {
@@ -121,6 +121,12 @@ impl NetworkManager {
             onicecandidate_closure.forget();
         }
 
+        let network_manager = Rc::new(RefCell::new(NetworkManager {
+            session_id: session_id.clone(),
+            peer_connection: peer_connection.clone(),
+            data_channel: None,
+        }));
+
         // peer_connection on ice connection state change
         {
             let peer_connection_clone = peer_connection.clone();
@@ -141,9 +147,10 @@ impl NetworkManager {
 
         // peer_connection on data channel
         {
+            let network_manager_clone = network_manager.clone();
             let ondatachannel_callback = Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
                 let data_channel = data_channel_event.channel();
-                // TODO: set data channel on network manager
+                network_manager_clone.borrow_mut().data_channel = Some(data_channel);
             }) as Box<dyn FnMut(RtcDataChannelEvent)>);
             peer_connection.set_ondatachannel(Some(ondatachannel_callback.as_ref().unchecked_ref()));
             ondatachannel_callback.forget();
@@ -191,16 +198,12 @@ impl NetworkManager {
             onmessage_closure.forget();
         }
 
-        Ok(Rc::new(RefCell::new(NetworkManager {
-            peer_connection,
-            data_channel,
-            session_id,
-        })))
+        Ok(network_manager)
     }
 
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
         info!("server will try to send a message: {:?}", &message);
-        self.data_channel.send_with_str(message)
+        self.data_channel.as_ref().unwrap().send_with_str(message)
     }
 }
 
