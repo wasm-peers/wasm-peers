@@ -82,6 +82,7 @@ impl NetworkManager {
                             peer_connection_clone,
                             websocket_clone,
                             session_id_clone,
+                            is_host
                         )
                         .await
                         .unwrap_or_else(|error| {
@@ -224,6 +225,7 @@ async fn handle_websocket_message(
     peer_connection: RtcPeerConnection,
     websocket: WebSocket,
     session_id: SessionId,
+    is_host: bool,
 ) -> Result<(), JsValue> {
     match message {
         SignalMessage::SessionStartOrJoin(session_id) => {
@@ -231,14 +233,14 @@ async fn handle_websocket_message(
         }
         SignalMessage::SessionReady(session_id, is_host) => {
             info!("peer received info that session is ready {}", session_id);
-            // both peers create an offer and race for whose offer will reach the signaling server first
-            // second offer is ignored by the signaling server
-            let offer = create_sdp_offer(peer_connection.clone()).await?;
-            info!("created an offer: {}", offer);
-            let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
-            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-            websocket.send_with_str(&signal_message)?;
-            info!("sent the offer to peer successfully: {}", session_id);
+            if is_host {
+                let offer = create_sdp_offer(peer_connection.clone()).await?;
+                info!("created an offer: {}", offer);
+                let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
+                let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+                websocket.send_with_str(&signal_message)?;
+                info!("sent the offer to peer successfully: {}", session_id);
+            }
         }
         SignalMessage::SdpOffer(offer, session_id) => {
             info!("received offer from peer: {}, {}", offer, session_id);
