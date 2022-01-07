@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
-use log::{error, info};
+use log::{error, info, warn};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
@@ -16,6 +16,7 @@ type UserId = usize;
 pub struct Session {
     pub first: UserId,
     pub second: Option<UserId>,
+    pub offer_received: bool,
 }
 
 pub type Connections = Arc<RwLock<HashMap<UserId, mpsc::UnboundedSender<Message>>>>;
@@ -68,19 +69,30 @@ async fn user_message(
     if let Ok(msg) = msg.to_str() {
         match serde_json::from_str::<SignalMessage>(msg) {
             Ok(request) => {
+                info!("message received from user {}: {:?}", user_id, request);
                 match request {
-                    // on first user in session - create session object and store connecting user id
-                    // on second user - add him to existing session
                     SignalMessage::SessionStartOrJoin(session_id) => {
-                        match sessions.write().await.entry(session_id) {
-                            Entry::Occupied(mut entry) => {
-                                entry.get_mut().second = Some(user_id);
-                            }
+                        match sessions.write().await.entry(session_id.clone()) {
+                            // on first user in session - create session object and store connecting user id
                             Entry::Vacant(entry) => {
                                 entry.insert(Session {
                                     first: user_id,
                                     second: None,
+                                    offer_received: false,
                                 });
+                            }
+                            // on second user - add him to existing session and notify users that session is ready
+                            Entry::Occupied(mut entry) => {
+                                entry.get_mut().second = Some(user_id);
+                                let response = SignalMessage::SessionReady(session_id);
+                                let response = serde_json::to_string(&response).unwrap();
+                                let connections_reader = connections.read().await;
+                                let recipient_1_tx = connections_reader.get(&user_id).unwrap();
+                                let recipient_2_tx =
+                                    connections_reader.get(&entry.get().first).unwrap();
+
+                                recipient_1_tx.send(Message::text(&response)).unwrap();
+                                recipient_2_tx.send(Message::text(response)).unwrap();
                             }
                         }
                     }
@@ -88,6 +100,10 @@ async fn user_message(
                     SignalMessage::SdpOffer(offer, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
+                                if session.offer_received {
+                                    warn!("offer already sent by the the peer, ignoring the second offer: {}", session_id);
+                                }
+
                                 let recipient = if user_id == session.first {
                                     session.second
                                 } else {
@@ -101,7 +117,7 @@ async fn user_message(
                                         let recipient_tx =
                                             connections_reader.get(&recipient_id).unwrap();
 
-                                        recipient_tx.send(Message::text(response));
+                                        recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
                                         error!("Missing second user in session: {}", &session_id);
@@ -130,7 +146,7 @@ async fn user_message(
                                         let recipient_tx =
                                             connections_reader.get(&recipient_id).unwrap();
 
-                                        recipient_tx.send(Message::text(response));
+                                        recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
                                         error!("Missing second user in session: {}", &session_id);
@@ -159,7 +175,7 @@ async fn user_message(
                                         let recipient_tx =
                                             connections_reader.get(&recipient_id).unwrap();
 
-                                        recipient_tx.send(Message::text(response));
+                                        recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
                                         error!("Missing second user in session: {}", &session_id);

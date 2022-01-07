@@ -32,6 +32,7 @@ features = [
     "RtcPeerConnectionIceEvent",
     "RtcIceConnectionState",
     "RtcIceCandidate",
+    "RtcIceCandidateInit",
     "RtcDataChannel",
     "RtcDataChannelEvent",
     "RtcConfiguration",

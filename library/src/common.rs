@@ -8,8 +8,8 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{console, RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
 
-use crate::server::Server;
 use crate::mini_client::MiniClient;
+use crate::mini_server::MiniServer;
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
@@ -17,9 +17,9 @@ pub const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
-    candidate: String,
-    sdp_mid: String,
-    sdp_m_line_index: u16,
+    pub candidate: String,
+    pub sdp_m_id: String,
+    pub sdp_m_line_index: u16,
 }
 
 pub(crate) fn set_panic_hook() {
@@ -49,13 +49,37 @@ pub(crate) fn create_peer_connection() -> Result<RtcPeerConnection, JsValue> {
     RtcPeerConnection::new_with_configuration(&rtc_configuration)
 }
 
-pub(crate) async fn create_sdp_offer(peer_connection: RtcPeerConnection) -> Result<String, JsValue> {
+pub(crate) async fn create_sdp_offer(
+    peer_connection: RtcPeerConnection,
+) -> Result<String, JsValue> {
     let offer = JsFuture::from(peer_connection.create_offer()).await?;
-    let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?.as_string().unwrap();
-    let mut session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
-    session_description.sdp(&offer);
+    let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?
+        .as_string()
+        .unwrap();
 
-    JsFuture::from(peer_connection.set_local_description(&session_description)).await?;
+    let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+    local_session_description.sdp(&offer);
+    JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
 
     Ok(offer)
+}
+
+pub(crate) async fn create_sdp_answer(
+    peer_connection: RtcPeerConnection,
+    offer: String,
+) -> Result<String, JsValue> {
+    let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+    remote_session_description.sdp(&offer);
+    JsFuture::from(peer_connection.set_remote_description(&remote_session_description)).await?;
+
+    let answer = JsFuture::from(peer_connection.create_answer()).await?;
+    let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
+        .as_string()
+        .unwrap();
+
+    let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+    local_session_description.sdp(&answer);
+    JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
+
+    Ok(answer)
 }

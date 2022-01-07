@@ -1,14 +1,17 @@
-mod mini_client;
 mod common;
+mod mini_client;
 mod mini_server;
+mod network_manager;
 
+use log::{debug, info};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
+use crate::common::set_panic_hook;
 use crate::mini_client::MiniClient;
 use crate::mini_server::MiniServer;
-use crate::common::set_panic_hook;
+use crate::network_manager::NetworkManager;
 
 #[wasm_bindgen]
 extern "C" {
@@ -22,10 +25,12 @@ extern "C" {
 pub async fn main() -> Result<(), JsValue> {
     set_panic_hook();
 
-    console::log_1(&"wasm main started".into());
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
 
-    let server = MiniServer::start("TODO-session-id".to_string())?;
-    let client = MiniClient::new()?;
+    debug!("wasm main started");
+
+    let server = NetworkManager::start("TODO-session-id".to_string())?;
+    let client = NetworkManager::start("TODO-session-id".to_string())?;
 
     // server
     //     .borrow()
