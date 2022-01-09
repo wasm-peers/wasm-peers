@@ -11,7 +11,7 @@ pub async fn main() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
 
     info!("wasm client started");
-    let client = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Local, false)?;
+    let client = NetworkManager::start("TODO-session-id".to_string(), ConnectionType::Stun, false)?;
 
     Ok(())
 }

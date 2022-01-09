@@ -7,7 +7,7 @@ use wasm_bindgen::{JsCast, JsValue, UnwrapThrowExt};
 use log::{debug, error, info, warn};
 use rusty_games_protocol::{SessionId, SignalMessage};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{MessageEvent, RtcPeerConnection, RtcPeerConnectionIceEvent};
+use web_sys::{MessageEvent, RtcIceGatheringState, RtcPeerConnection, RtcPeerConnectionIceEvent};
 use web_sys::{
     RtcDataChannel, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit,
     RtcIceConnectionState, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
@@ -52,7 +52,42 @@ impl NetworkManager {
             data_channel: None,
         }));
 
+        let websocket = WebSocket::new(WS_IP_PORT)?;
+        websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
+
         if is_host {
+            // peer connection on negotiation needed
+            let peer_connection_clone = peer_connection.clone();
+            let session_id_clone = session_id.clone();
+            let websocket_clone = websocket.clone();
+            {
+                let on_negotiation_needed = Closure::wrap(Box::new(move || {
+                    warn!("on negotiation needed event occurred!");
+                    let peer_connection_clone = peer_connection_clone.clone();
+                    let session_id_clone = session_id_clone.clone();
+                    let websocket_clone = websocket_clone.clone();
+                    // TODO: only do this if websocket is open!!!
+                    info!("(on negotiation needed) websocket ready state: {}", websocket_clone.ready_state());
+                    if websocket_clone.ready_state() == 1 {
+                        info!("(on negotiation needed) websocket is ready");
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let offer = create_sdp_offer(peer_connection_clone).await.unwrap();
+                            info!("(on negotiation needed, is_host: {}) created an offer: {}", is_host, offer);
+                            let signal_message = SignalMessage::SdpOffer(offer, session_id_clone.clone());
+                            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+                            match websocket_clone.send_with_str(&signal_message) {
+                                Ok(_) => info!("(on negotiation needed) websocket send offer successful"),
+                                Err(error) => error!("(on negotiation needed) websocket not yet ready"),
+                            }
+                            info!("(on negotiation needed) sent the offer to peer successfully: {}", session_id_clone);
+                        });
+                    }
+                }) as Box<dyn FnMut()>);
+                peer_connection
+                    .set_onnegotiationneeded(Some(on_negotiation_needed.as_ref().unchecked_ref()));
+                on_negotiation_needed.forget();
+            }
+
             let data_channel =
                 peer_connection.create_data_channel(&format!("data_channel_{}", &session_id));
             info!("data_channel created: label {:?}", data_channel.label());
@@ -177,9 +212,6 @@ impl NetworkManager {
             }
         }
 
-        let websocket = WebSocket::new(WS_IP_PORT)?;
-        websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
-
         // websocket on open
         // once websocket is open, send a request to open a session
         {
@@ -251,6 +283,8 @@ impl NetworkManager {
                         let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
 
                         websocket_clone.send_with_str(&signal_message).unwrap();
+                    } else {
+                        warn!("no ICE candidate found!");
                     }
                 })
                     as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
@@ -279,6 +313,23 @@ impl NetworkManager {
                 oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
             ));
             oniceconnectionstatechange_callback.forget();
+        }
+
+        // peer_connection on ice gathering state change
+        {
+            let peer_connection_clone = peer_connection.clone();
+            let onicegatheringstatechange_callback =
+                Closure::wrap(
+                    Box::new(move || match peer_connection_clone.ice_gathering_state() {
+                        state => {
+                            info!("ice gathering state: {:?}", state);
+                        }
+                    }) as Box<dyn FnMut()>,
+                );
+            peer_connection.set_onicegatheringstatechange(Some(
+                onicegatheringstatechange_callback.as_ref().unchecked_ref(),
+            ));
+            onicegatheringstatechange_callback.forget();
         }
 
         Ok(network_manager)
@@ -332,7 +383,10 @@ async fn handle_websocket_message(
             info!("set remote description");
         }
         SignalMessage::IceCandidate(ice_candidate, session_id) => {
-            info!("(is host: {}) peer received ice candidate: {}", is_host, &ice_candidate);
+            info!(
+                "(is host: {}) peer received ice candidate: {}",
+                is_host, &ice_candidate
+            );
             let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
 
             let mut rtc_candidate = RtcIceCandidateInit::new("");
@@ -346,7 +400,10 @@ async fn handle_websocket_message(
             )
             .await
             .unwrap();
-            info!("(is host: {}) added ice candidate {:?}", is_host, ice_candidate);
+            info!(
+                "(is host: {}) added ice candidate {:?}",
+                is_host, ice_candidate
+            );
         }
         SignalMessage::Error(error, session_id) => {
             error!(

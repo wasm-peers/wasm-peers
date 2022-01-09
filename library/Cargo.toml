@@ -40,6 +40,7 @@ features = [
     "RtcDataChannel",
     "RtcDataChannelEvent",
     "RtcConfiguration",
+    "RtcIceGatheringState",
 
     # WebSocket features
     "WebSocket",
