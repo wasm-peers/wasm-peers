@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "library",
+    "library-client",
+    "library-server",
     "signaling-server",
     "protocol",
 ]

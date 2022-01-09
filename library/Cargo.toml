@@ -4,12 +4,6 @@ version = "0.1.0"
 authors = ["Tomek Karwowski <to.karwowski@gmail.com>"]
 edition = "2021"
 
-[lib]
-crate-type = ["cdylib"]
-
-[profile.release]
-debug = true
-
 [features]
 default = ["console_error_panic_hook"]
 
