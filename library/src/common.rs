@@ -16,12 +16,11 @@ const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
 pub const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
     pub candidate: String,
-    pub sdpMid: String,
-    pub sdpMLineIndex: u16,
+    pub sdp_mid: String,
+    pub sdp_m_line_index: u16,
 }
 
 pub fn set_panic_hook() {
@@ -69,17 +68,14 @@ pub(crate) async fn create_sdp_answer(
     peer_connection: RtcPeerConnection,
     offer: String,
 ) -> Result<String, JsValue> {
-    debug!("create_sdp_answer");
     let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     remote_session_description.sdp(&offer);
     JsFuture::from(peer_connection.set_remote_description(&remote_session_description)).await?;
-    debug!("set remote description successfully");
 
     let answer = JsFuture::from(peer_connection.create_answer()).await?;
     let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
         .as_string()
         .unwrap();
-    debug!("created answer successfully: {}", answer);
 
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
     local_session_description.sdp(&answer);
