@@ -52,164 +52,211 @@ impl NetworkManager {
             data_channel: None,
         }));
 
+        let data_channel = peer_connection.create_data_channel(&session_id);
+        info!("data_channel created: label {:?}", data_channel.label());
+
+        // data_channel.onopen
+        {
+            let data_channel_clone = data_channel.clone();
+            let onopen_callback = Closure::wrap(Box::new(move |_| {
+                info!("data channel is now open!");
+                // TODO: inform server that data channel is open and ready for transmission
+            }) as Box<dyn FnMut(JsValue)>);
+            data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+            onopen_callback.forget();
+        }
+
+        // data_channel.onerror
+        {
+            let onerror = Closure::wrap(Box::new(move |data_channel_error| {
+                error!("data channel error: {:?}", data_channel_error);
+            }) as Box<dyn FnMut(JsValue)>);
+            data_channel.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+            onerror.forget();
+        }
+
+        // data_channel.onmessage
+        {
+            let data_channel_clone = data_channel.clone();
+            let datachannel_on_message =
+                Closure::wrap(
+                    Box::new(move |ev: MessageEvent| match ev.data().as_string() {
+                        Some(message) => {
+                            info!("message to peer connection 1: {:?}", message);
+
+                            // TODO: handle received message
+                            data_channel_clone
+                                .send_with_str(&format!("Echoing back the message: {:?}", message))
+                                .unwrap_or_else(|error| {
+                                    warn!("Couldn't send to data channel: {:?}", error);
+                                });
+                        }
+                        None => {}
+                    }) as Box<dyn FnMut(MessageEvent)>,
+                );
+            data_channel.set_onmessage(Some(datachannel_on_message.as_ref().unchecked_ref()));
+            datachannel_on_message.forget();
+        }
+
+        network_manager.borrow_mut().data_channel = Some(data_channel);
+
         let websocket = WebSocket::new(WS_IP_PORT)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
-        if is_host {
-            // peer connection on negotiation needed
+        // peer_connection on ice candidate
+        let on_ice_candidate = peer_connection_on_ice_candidate(websocket.clone(), session_id.clone());
+        peer_connection.set_onicecandidate(Some(on_ice_candidate.as_ref().unchecked_ref()));
+        on_ice_candidate.forget();
+
+        // peer_connection on ice connection state change
+        {
+            let network_manager_clone = network_manager.clone();
+            let peer_connection_clone = peer_connection.clone();
+            let on_ice_connection_state_change =
+                Closure::wrap(
+                    Box::new(move || match peer_connection_clone.ice_connection_state() {
+                        RtcIceConnectionState::Connected => {
+                            warn!("peer connection changed state to CONNECTED");
+                            debug!("network manager: {:#?}", &network_manager_clone);
+                        }
+                        state_change => {
+                            warn!("unhandled connection state change: {:?}", state_change);
+                        }
+                    }) as Box<dyn FnMut()>,
+                );
+            peer_connection.set_oniceconnectionstatechange(Some(
+                on_ice_connection_state_change.as_ref().unchecked_ref(),
+            ));
+            on_ice_connection_state_change.forget();
+        }
+
+        // peer_connection on ice gathering state change
+        {
             let peer_connection_clone = peer_connection.clone();
             let session_id_clone = session_id.clone();
             let websocket_clone = websocket.clone();
-            {
-                let on_negotiation_needed = Closure::wrap(Box::new(move || {
-                    warn!("on negotiation needed event occurred!");
-                    let peer_connection_clone = peer_connection_clone.clone();
-                    let session_id_clone = session_id_clone.clone();
-                    let websocket_clone = websocket_clone.clone();
-                    // TODO: only do this if websocket is open!!!
-                    info!("(on negotiation needed) websocket ready state: {}", websocket_clone.ready_state());
-                    if websocket_clone.ready_state() == 1 {
-                        info!("(on negotiation needed) websocket is ready");
-                        wasm_bindgen_futures::spawn_local(async move {
-                            let offer = create_sdp_offer(peer_connection_clone).await.unwrap();
-                            info!("(on negotiation needed, is_host: {}) created an offer: {}", is_host, offer);
-                            let signal_message = SignalMessage::SdpOffer(offer, session_id_clone.clone());
-                            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-                            match websocket_clone.send_with_str(&signal_message) {
-                                Ok(_) => info!("(on negotiation needed) websocket send offer successful"),
-                                Err(error) => error!("(on negotiation needed) websocket not yet ready"),
-                            }
-                            info!("(on negotiation needed) sent the offer to peer successfully: {}", session_id_clone);
-                        });
-                    }
-                }) as Box<dyn FnMut()>);
-                peer_connection
-                    .set_onnegotiationneeded(Some(on_negotiation_needed.as_ref().unchecked_ref()));
-                on_negotiation_needed.forget();
-            }
-
-            let data_channel =
-                peer_connection.create_data_channel(&format!("data_channel_{}", &session_id));
-            info!("data_channel created: label {:?}", data_channel.label());
-
-            // data_channel.onopen
-            {
-                let data_channel_clone = data_channel.clone();
-                let onopen_callback = Closure::wrap(Box::new(move |_| {
-                    info!("data channel is now open!");
-                    // TODO: inform server that data channel is open and ready for transmission
-                }) as Box<dyn FnMut(JsValue)>);
-                data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-                onopen_callback.forget();
-            }
-
-            // data_channel.onerror
-            {
-                let onerror = Closure::wrap(Box::new(move |data_channel_error| {
-                    error!("data channel error: {:?}", data_channel_error);
-                }) as Box<dyn FnMut(JsValue)>);
-                data_channel.set_onerror(Some(onerror.as_ref().unchecked_ref()));
-                onerror.forget();
-            }
-
-            // data_channel.onmessage
-            {
-                let data_channel_clone = data_channel.clone();
-                let onmessage_closure =
-                    Closure::wrap(
-                        Box::new(move |ev: MessageEvent| match ev.data().as_string() {
-                            Some(message) => {
-                                info!("message to peer connection 1: {:?}", message);
-
-                                // TODO: handle received message
-                                data_channel_clone
-                                    .send_with_str(&format!(
-                                        "Echoing back the message: {:?}",
-                                        message
-                                    ))
-                                    .unwrap_or_else(|error| {
-                                        warn!("Couldn't send to data channel: {:?}", error);
-                                    });
-                            }
-                            None => {}
-                        }) as Box<dyn FnMut(MessageEvent)>,
-                    );
-                data_channel.set_onmessage(Some(onmessage_closure.as_ref().unchecked_ref()));
-                onmessage_closure.forget();
-            }
-
-            network_manager.borrow_mut().data_channel = Some(data_channel);
-            debug!("network manager: {:#?}", &network_manager);
-        } else {
-            info!("setting on data channel callback");
-            // peer_connection on data channel
-            {
-                let network_manager_clone = network_manager.clone();
-                let ondatachannel_callback =
-                    Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
-                        info!("received data channel");
-                        let data_channel = data_channel_event.channel();
-                        network_manager_clone.borrow_mut().data_channel =
-                            Some(data_channel.clone());
-
-                        // data_channel.onopen
-                        {
-                            let data_channel_clone = data_channel.clone();
-                            let onopen_callback = Closure::wrap(Box::new(move |_| {
-                                info!("data channel is now open!");
-                                // TODO: inform server that data channel is open and ready for transmission
-                            })
-                                as Box<dyn FnMut(JsValue)>);
-                            data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-                            onopen_callback.forget();
+            let on_ice_gathering_state_change =
+                Closure::wrap(
+                    Box::new(move || match peer_connection_clone.ice_gathering_state() {
+                        state => {
+                            warn!("ice gathering state: {:?}", state);
                         }
+                    }) as Box<dyn FnMut()>,
+                );
+            peer_connection.set_onicegatheringstatechange(Some(
+                on_ice_gathering_state_change.as_ref().unchecked_ref(),
+            ));
+            on_ice_gathering_state_change.forget();
+        }
 
-                        // data_channel.onerror
-                        {
-                            let onerror = Closure::wrap(Box::new(move |data_channel_error| {
+        // peer connection on negotiation needed
+        {
+            let peer_connection_clone = peer_connection.clone();
+            let session_id_clone = session_id.clone();
+            let websocket_clone = websocket.clone();
+            let on_negotiation_needed = Closure::wrap(Box::new(move || {
+                warn!("on negotiation needed event occurred!");
+                let peer_connection_clone = peer_connection_clone.clone();
+                let session_id_clone = session_id_clone.clone();
+                let websocket_clone = websocket_clone.clone();
+                // TODO: only do this if websocket is open!!!
+                info!(
+                    "(on negotiation needed) websocket ready state: {}",
+                    websocket_clone.ready_state()
+                );
+                if websocket_clone.ready_state() == 1 {
+                    info!("(on negotiation needed) websocket is ready");
+                    wasm_bindgen_futures::spawn_local(async move {
+                        let offer = create_sdp_offer(peer_connection_clone).await.unwrap();
+                        info!(
+                            "(on negotiation needed, is_host: {}) created an offer: {}",
+                            is_host, offer
+                        );
+                        let signal_message =
+                            SignalMessage::SdpOffer(offer, session_id_clone.clone());
+                        let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+                        match websocket_clone.send_with_str(&signal_message) {
+                            Ok(_) => {
+                                info!("(on negotiation needed) websocket send offer successful")
+                            }
+                            Err(error) => error!("(on negotiation needed) websocket not yet ready"),
+                        }
+                        info!(
+                            "(on negotiation needed) sent the offer to peer successfully: {}",
+                            session_id_clone
+                        );
+                    });
+                }
+            }) as Box<dyn FnMut()>);
+            peer_connection
+                .set_onnegotiationneeded(Some(on_negotiation_needed.as_ref().unchecked_ref()));
+            on_negotiation_needed.forget();
+        }
+
+        info!("setting on data channel callback");
+        // peer_connection on data channel
+        {
+            let network_manager_clone = network_manager.clone();
+            let on_datachannel =
+                Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
+                    info!("received data channel");
+                    let data_channel = data_channel_event.channel();
+                    network_manager_clone.borrow_mut().data_channel = Some(data_channel.clone());
+
+                    // data_channel.onopen
+                    {
+                        let data_channel_clone = data_channel.clone();
+                        let datachannel_on_open = Closure::wrap(Box::new(move |_| {
+                            info!("data channel is now open!");
+                            // TODO: inform server that data channel is open and ready for transmission
+                        })
+                            as Box<dyn FnMut(JsValue)>);
+                        data_channel.set_onopen(Some(datachannel_on_open.as_ref().unchecked_ref()));
+                        datachannel_on_open.forget();
+                    }
+
+                    // data_channel.onerror
+                    {
+                        let datachannel_on_error =
+                            Closure::wrap(Box::new(move |data_channel_error| {
                                 error!("data channel error: {:?}", data_channel_error);
                             })
                                 as Box<dyn FnMut(JsValue)>);
-                            data_channel.set_onerror(Some(onerror.as_ref().unchecked_ref()));
-                            onerror.forget();
-                        }
+                        data_channel
+                            .set_onerror(Some(datachannel_on_error.as_ref().unchecked_ref()));
+                        datachannel_on_error.forget();
+                    }
 
-                        // data_channel.onmessage
-                        {
-                            let data_channel_clone = data_channel.clone();
-                            let onmessage_closure =
-                                Closure::wrap(Box::new(move |ev: MessageEvent| {
-                                    match ev.data().as_string() {
-                                        Some(message) => {
-                                            info!("message to peer connection 1: {:?}", message);
+                    // data_channel.onmessage
+                    {
+                        let data_channel_clone = data_channel.clone();
+                        let datachannel_on_message =
+                            Closure::wrap(Box::new(move |ev: MessageEvent| {
+                                match ev.data().as_string() {
+                                    Some(message) => {
+                                        info!("message to peer connection 1: {:?}", message);
 
-                                            // TODO: handle received message
-                                            data_channel_clone
-                                                .send_with_str(&format!(
-                                                    "Echoing back the message: {:?}",
-                                                    message
-                                                ))
-                                                .unwrap_or_else(|error| {
-                                                    warn!(
-                                                        "Couldn't send to data channel: {:?}",
-                                                        error
-                                                    );
-                                                });
-                                        }
-                                        None => {}
+                                        // TODO: handle received message
+                                        data_channel_clone
+                                            .send_with_str(&format!(
+                                                "Echoing back the message: {:?}",
+                                                message
+                                            ))
+                                            .unwrap_or_else(|error| {
+                                                warn!("Couldn't send to data channel: {:?}", error);
+                                            });
                                     }
-                                })
-                                    as Box<dyn FnMut(MessageEvent)>);
-                            data_channel
-                                .set_onmessage(Some(onmessage_closure.as_ref().unchecked_ref()));
-                            onmessage_closure.forget();
-                        }
-                    })
-                        as Box<dyn FnMut(RtcDataChannelEvent)>);
-                peer_connection
-                    .set_ondatachannel(Some(ondatachannel_callback.as_ref().unchecked_ref()));
-                ondatachannel_callback.forget();
-            }
+                                    None => {}
+                                }
+                            })
+                                as Box<dyn FnMut(MessageEvent)>);
+                        data_channel
+                            .set_onmessage(Some(datachannel_on_message.as_ref().unchecked_ref()));
+                        datachannel_on_message.forget();
+                    }
+                }) as Box<dyn FnMut(RtcDataChannelEvent)>);
+            peer_connection.set_ondatachannel(Some(on_datachannel.as_ref().unchecked_ref()));
+            on_datachannel.forget();
         }
 
         // websocket on open
@@ -259,79 +306,6 @@ impl NetworkManager {
             onmessage_callback.forget();
         }
 
-        // peer_connection on ice candidate
-        // receive ice candidate from STUN server and send it to client via websocket
-        {
-            let websocket_clone = websocket.clone();
-            let session_id_clone = session_id.clone();
-            let onicecandidate_closure =
-                Closure::wrap(Box::new(move |ev: RtcPeerConnectionIceEvent| {
-                    if let Some(candidate) = ev.candidate() {
-                        let signaled_candidate = IceCandidate {
-                            candidate: candidate.candidate(),
-                            sdp_mid: candidate.sdp_mid().unwrap(),
-                            sdp_m_line_index: candidate.sdp_m_line_index().unwrap(),
-                        };
-                        info!("signaled candidate: {:#?}", signaled_candidate);
-                        let signaled_candidate =
-                            serde_json_wasm::to_string(&signaled_candidate).unwrap();
-
-                        let signal_message = SignalMessage::IceCandidate(
-                            signaled_candidate,
-                            session_id_clone.clone(),
-                        );
-                        let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-
-                        websocket_clone.send_with_str(&signal_message).unwrap();
-                    } else {
-                        warn!("no ICE candidate found!");
-                    }
-                })
-                    as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
-            peer_connection
-                .set_onicecandidate(Some(onicecandidate_closure.as_ref().unchecked_ref()));
-            onicecandidate_closure.forget();
-        }
-
-        // peer_connection on ice connection state change
-        {
-            let network_manager_clone = network_manager.clone();
-            let peer_connection_clone = peer_connection.clone();
-            let oniceconnectionstatechange_callback =
-                Closure::wrap(
-                    Box::new(move || match peer_connection_clone.ice_connection_state() {
-                        RtcIceConnectionState::Connected => {
-                            info!("peer connection changed state to CONNECTED");
-                            debug!("network manager: {:#?}", &network_manager_clone);
-                        }
-                        state_change => {
-                            warn!("unhandled connection state change: {:?}", state_change);
-                        }
-                    }) as Box<dyn FnMut()>,
-                );
-            peer_connection.set_oniceconnectionstatechange(Some(
-                oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
-            ));
-            oniceconnectionstatechange_callback.forget();
-        }
-
-        // peer_connection on ice gathering state change
-        {
-            let peer_connection_clone = peer_connection.clone();
-            let onicegatheringstatechange_callback =
-                Closure::wrap(
-                    Box::new(move || match peer_connection_clone.ice_gathering_state() {
-                        state => {
-                            info!("ice gathering state: {:?}", state);
-                        }
-                    }) as Box<dyn FnMut()>,
-                );
-            peer_connection.set_onicegatheringstatechange(Some(
-                onicegatheringstatechange_callback.as_ref().unchecked_ref(),
-            ));
-            onicegatheringstatechange_callback.forget();
-        }
-
         Ok(network_manager)
     }
 
@@ -339,6 +313,28 @@ impl NetworkManager {
         info!("server will try to send a message: {:?}", &message);
         self.data_channel.as_ref().unwrap().send_with_str(message)
     }
+}
+
+fn peer_connection_on_ice_candidate(websocket_clone: WebSocket, session_id_clone: SessionId) -> Closure<dyn FnMut(RtcPeerConnectionIceEvent)> {
+    Closure::wrap(Box::new(move |ev: RtcPeerConnectionIceEvent| {
+        if let Some(candidate) = ev.candidate() {
+            let signaled_candidate = IceCandidate {
+                candidate: candidate.candidate(),
+                sdp_mid: candidate.sdp_mid().unwrap(),
+                sdp_m_line_index: candidate.sdp_m_line_index().unwrap(),
+            };
+            info!("signaled candidate: {:#?}", signaled_candidate);
+            let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate).unwrap();
+
+            let signal_message =
+                SignalMessage::IceCandidate(signaled_candidate, session_id_clone.clone());
+            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+
+            websocket_clone.send_with_str(&signal_message).unwrap();
+        } else {
+            warn!("no ICE candidate found!");
+        }
+    }) as Box<dyn FnMut(RtcPeerConnectionIceEvent)>)
 }
 
 async fn handle_websocket_message(
