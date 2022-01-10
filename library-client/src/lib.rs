@@ -2,8 +2,8 @@ use log::info;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-use rusty_games_library::network_manager::{ConnectionType, NetworkManager};
 use rusty_games_library::common::set_panic_hook;
+use rusty_games_library::network_manager::{ConnectionType, NetworkManager};
 
 #[wasm_bindgen(start)]
 pub async fn main() -> Result<(), JsValue> {

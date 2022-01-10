@@ -14,7 +14,7 @@ use rusty_games_protocol::{SessionId, SignalMessage};
 type UserId = usize;
 
 pub struct Session {
-    pub first: UserId,
+    pub first: Option<UserId>,
     pub second: Option<UserId>,
     pub offer_received: bool,
 }
@@ -57,7 +57,7 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
     }
 
     eprintln!("user disconnected: {}", id);
-    connections.write().await.remove(&id);
+    user_disconnected(id, &connections, &sessions).await;
 }
 
 async fn user_message(
@@ -76,7 +76,7 @@ async fn user_message(
                             // on first user in session - create session object and store connecting user id
                             Entry::Vacant(entry) => {
                                 entry.insert(Session {
-                                    first: user_id,
+                                    first: Some(user_id),
                                     second: None,
                                     offer_received: false,
                                 });
@@ -84,17 +84,22 @@ async fn user_message(
                             // on second user - add him to existing session and notify users that session is ready
                             Entry::Occupied(mut entry) => {
                                 entry.get_mut().second = Some(user_id);
-                                let first_response = SignalMessage::SessionReady(session_id.clone(), true);
-                                let first_response = serde_json::to_string(&first_response).unwrap();
-                                let second_response = SignalMessage::SessionReady(session_id, false);
-                                let second_response = serde_json::to_string(&second_response).unwrap();
+                                let first_response =
+                                    SignalMessage::SessionReady(session_id.clone(), true);
+                                let first_response =
+                                    serde_json::to_string(&first_response).unwrap();
+                                let second_response =
+                                    SignalMessage::SessionReady(session_id, false);
+                                let second_response =
+                                    serde_json::to_string(&second_response).unwrap();
 
                                 let connections_reader = connections.read().await;
-                                let first_tx =
-                                    connections_reader.get(&entry.get().first).unwrap();
-                                first_tx.send(Message::text(first_response)).unwrap();
-                                let second_tx = connections_reader.get(&user_id).unwrap();
-                                second_tx.send(Message::text(&second_response)).unwrap();
+                                if let Some(first_id) = &entry.get().first {
+                                    let first_tx = connections_reader.get(first_id).unwrap();
+                                    first_tx.send(Message::text(first_response)).unwrap();
+                                    let second_tx = connections_reader.get(&user_id).unwrap();
+                                    second_tx.send(Message::text(&second_response)).unwrap();
+                                }
                             }
                         }
                     }
@@ -108,10 +113,10 @@ async fn user_message(
                                     session.offer_received = true;
                                 }
 
-                                let recipient = if user_id == session.first {
+                                let recipient = if Some(user_id) == session.first {
                                     session.second
                                 } else {
-                                    Some(session.first)
+                                    session.first
                                 };
                                 match recipient {
                                     Some(recipient_id) => {
@@ -137,10 +142,10 @@ async fn user_message(
                     SignalMessage::SdpAnswer(answer, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
-                                let recipient = if user_id == session.first {
+                                let recipient = if Some(user_id) == session.first {
                                     session.second
                                 } else {
-                                    Some(session.first)
+                                    session.first
                                 };
                                 match recipient {
                                     Some(recipient_id) => {
@@ -165,10 +170,10 @@ async fn user_message(
                     SignalMessage::IceCandidate(candidate, session_id) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
-                                let recipient = if user_id == session.first {
+                                let recipient = if Some(user_id) == session.first {
                                     session.second
                                 } else {
-                                    Some(session.first)
+                                    session.first
                                 };
                                 match recipient {
                                     Some(recipient_id) => {
@@ -199,4 +204,23 @@ async fn user_message(
             }
         }
     }
+}
+
+async fn user_disconnected(user_id: usize, connections: &Connections, sessions: &Sessions) {
+    let mut session_to_delete = None;
+    for (session_id, session) in sessions.write().await.iter_mut() {
+        if session.first == Some(user_id) {
+            session.first = None;
+        } else if session.second == Some(user_id) {
+            session.second = None;
+        }
+        if session.first == None && session.second == None {
+            session_to_delete = Some(session_id.clone());
+        }
+    }
+    // remove session if it's empty
+    if let Some(session_id) = session_to_delete {
+        sessions.write().await.remove(&session_id);
+    }
+    connections.write().await.remove(&user_id);
 }

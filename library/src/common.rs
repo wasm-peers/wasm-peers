@@ -1,16 +1,10 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use js_sys::{Array, Object, Reflect};
-use log::debug;
+
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{console, RtcConfiguration, RtcPeerConnection};
+use web_sys::{RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
-
-use crate::mini_client::MiniClient;
-use crate::mini_server::MiniServer;
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
