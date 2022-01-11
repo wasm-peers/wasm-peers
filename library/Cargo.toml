@@ -11,14 +11,15 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-console_error_panic_hook = { version = "0.1.6", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 serde = { version = "1.0", features = ["derive"] }
-serde-json-wasm = "0.3.1"
+serde-json-wasm = "0.3"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 log = "0.4"
 wasm-logger = "0.2"
+wasm-bindgen-test = "0.3"
 
 rusty-games-protocol = {path = "../protocol"}
 
