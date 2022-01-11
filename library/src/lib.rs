@@ -16,7 +16,7 @@ use crate::network_manager::{ConnectionType, NetworkManager};
 pub async fn start() -> Result<(), JsValue> {
     set_panic_hook();
 
-    wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
 
     debug!("wasm main started");
 
