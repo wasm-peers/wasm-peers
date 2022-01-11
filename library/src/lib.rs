@@ -1,15 +1,14 @@
+mod callbacks;
 pub mod common;
 mod mini_client;
 mod mini_server;
 pub mod network_manager;
 
 use log::{debug, info};
-
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
 use crate::common::set_panic_hook;
-
 use crate::network_manager::{ConnectionType, NetworkManager};
 
 #[wasm_bindgen(start)]

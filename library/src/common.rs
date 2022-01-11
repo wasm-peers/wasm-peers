@@ -1,5 +1,4 @@
 use js_sys::{Array, Object, Reflect};
-
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
