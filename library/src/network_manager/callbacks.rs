@@ -10,7 +10,7 @@ use web_sys::{
 
 use rusty_games_protocol::{SessionId, SignalMessage};
 
-use crate::common::{create_sdp_answer, create_sdp_offer, IceCandidate};
+use crate::network_manager::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 use crate::NetworkManager;
 
 /// also calls:
