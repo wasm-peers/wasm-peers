@@ -401,7 +401,7 @@ async fn handle_websocket_message(
         }
         SignalMessage::SdpAnswer(answer, session_id) => {
             info!("received answer from peer: {}, {}", answer, session_id);
-            let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+            let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
             remote_session_description.sdp(&answer);
             JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
                 .await
