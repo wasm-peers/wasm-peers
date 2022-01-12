@@ -6,3 +6,7 @@ members = [
     "signaling-server",
     "protocol",
 ]
+
+exclude = [
+    "library/examples/live-document"
+]

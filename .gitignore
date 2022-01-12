@@ -1,5 +1,8 @@
 .idea
 .vs
 
+pkg
+dist
+
 target
 Cargo.lock
