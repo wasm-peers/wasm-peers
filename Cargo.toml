@@ -1,12 +1,10 @@
 [workspace]
 members = [
+    "protocol",
+    "signaling-server",
     "library",
+
     "library-client",
     "library-server",
-    "signaling-server",
-    "protocol",
-]
-
-exclude = [
-    "library/examples/live-document"
+    "live-document",
 ]

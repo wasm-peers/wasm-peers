@@ -22,6 +22,7 @@ pub enum ConnectionType {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkManagerInner {
+    is_host: bool,
     session_id: String,
     websocket: WebSocket,
     peer_connection: RtcPeerConnection,
@@ -34,7 +35,7 @@ pub struct NetworkManager {
 }
 
 impl NetworkManager {
-    pub fn new(session_id: SessionId, connection_type: ConnectionType) -> Result<Self, JsValue> {
+    pub fn new(session_id: SessionId, connection_type: ConnectionType, is_host: bool) -> Result<Self, JsValue> {
         let peer_connection = match connection_type {
             ConnectionType::Local => RtcPeerConnection::new()?,
             ConnectionType::Stun => create_stun_peer_connection()?,
@@ -46,6 +47,7 @@ impl NetworkManager {
 
         Ok(NetworkManager {
             inner: Rc::new(RwLock::new(NetworkManagerInner {
+                is_host,
                 session_id,
                 websocket,
                 peer_connection,
@@ -58,11 +60,13 @@ impl NetworkManager {
         &mut self,
         on_open_callback: impl FnMut() + Clone + 'static,
         on_message_callback: impl FnMut(String) + Clone + 'static,
-        is_host: bool,
     ) -> Result<(), JsValue> {
-        let websocket = self.inner.read().unwrap().websocket.clone();
-        let peer_connection = self.inner.read().unwrap().peer_connection.clone();
-        let session_id = self.inner.read().unwrap().session_id.clone();
+        let network_manager_inner = self.inner.read().unwrap();
+        let is_host = network_manager_inner.is_host;
+        let websocket = network_manager_inner.websocket.clone();
+        let peer_connection = network_manager_inner.peer_connection.clone();
+        let session_id = network_manager_inner.session_id.clone();
+        std::mem::drop(network_manager_inner);
 
         if is_host {
             let data_channel = peer_connection.create_data_channel(&session_id);
