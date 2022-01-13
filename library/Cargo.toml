@@ -20,6 +20,7 @@ wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 log = "0.4"
 wasm-logger = "0.2"
 wasm-bindgen-test = "0.3"
+uuid = { version = "0.8", features = ["v4", "stdweb"] }
 
 rusty-games-protocol = {path = "../protocol"}
 

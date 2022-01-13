@@ -1,9 +1,6 @@
-use std::rc::Rc;
-use std::sync::RwLock;
-use web_sys::{HtmlTextAreaElement};
-
 use wasm_bindgen::JsCast;
-use yew::{html, Component, Context, Html, InputEvent, Properties};
+use web_sys::HtmlTextAreaElement;
+use yew::{html, Component, Context, Html, Properties};
 
 use rusty_games_library::network_manager::NetworkManager;
 use rusty_games_library::{ConnectionType, SessionId};
@@ -19,6 +16,7 @@ pub struct DocumentProps {
 }
 
 pub(crate) struct Document {
+    session_id: SessionId,
     network_manager: NetworkManager,
 }
 
@@ -44,13 +42,14 @@ impl Component for Document {
                     .expect("could not find textarea element by id")
                     .dyn_ref::<HtmlTextAreaElement>()
                     .expect("element is not a textarea")
-                    .set_value(&message);
+                    .set_value(message.strip_prefix("x").unwrap());
             }
         };
         network_manager
             .start(|| {}, on_message_callback)
             .expect("couldn't start network manager");
         Self {
+            session_id: props.session_id.clone(),
             network_manager,
         }
     }
@@ -68,19 +67,20 @@ impl Component for Document {
                     .expect("element is not a textarea")
                     .value();
                 self.network_manager
-                    .send_message(&textarea_value)
-                    .expect("cound't send message");
+                    .send_message(&format!("x{}", textarea_value))
+                    .expect("couldn't send message");
             }
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let oninput = ctx
-            .link()
-            .callback(|e: InputEvent| Self::Message::UpdateValue);
+        let oninput = ctx.link().callback(|_| Self::Message::UpdateValue);
         html! {
-            <textarea id={ "document-textarea" } { oninput }/>
+            <main>
+                <p> { "Session id: " } { &self.session_id } </p>
+                <textarea id={ "document-textarea" } { oninput }/>
+            </main>
         }
     }
 }

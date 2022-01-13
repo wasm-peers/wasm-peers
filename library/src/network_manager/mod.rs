@@ -8,7 +8,13 @@ use web_sys::{RtcDataChannel, WebSocket};
 
 use rusty_games_protocol::SessionId;
 
-use crate::network_manager::callbacks::{set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open, set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate, set_peer_connection_on_ice_connection_state_change, set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed, set_websocket_on_message, set_websocket_on_open};
+use crate::network_manager::callbacks::{
+    set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
+    set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
+    set_peer_connection_on_ice_connection_state_change,
+    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
+    set_websocket_on_message, set_websocket_on_open,
+};
 use crate::network_manager::utils::{create_stun_peer_connection, WS_IP_PORT};
 
 mod callbacks;
@@ -35,7 +41,11 @@ pub struct NetworkManager {
 }
 
 impl NetworkManager {
-    pub fn new(session_id: SessionId, connection_type: ConnectionType, is_host: bool) -> Result<Self, JsValue> {
+    pub fn new(
+        session_id: SessionId,
+        connection_type: ConnectionType,
+        is_host: bool,
+    ) -> Result<Self, JsValue> {
         let peer_connection = match connection_type {
             ConnectionType::Local => RtcPeerConnection::new()?,
             ConnectionType::Stun => create_stun_peer_connection()?,

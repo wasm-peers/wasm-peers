@@ -1,4 +1,4 @@
-use rusty_games_library::get_random_string;
+use rusty_games_library::get_random_session_id;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
@@ -37,7 +37,7 @@ impl Component for Home {
             let history = history.clone();
             Callback::once(move |_| {
                 history.push(Route::Document {
-                    session_id: get_random_string().unwrap(),
+                    session_id: get_random_session_id(),
                     is_host: true,
                 });
             })
