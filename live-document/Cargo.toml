@@ -17,4 +17,4 @@ wasm-logger = "0.2.0"
 web-sys = "0.3.55"
 wasm-bindgen = "0.2.78"
 
-rusty-games-library = {path = "../library"}
+rusty-games-library = { path = "../library" }

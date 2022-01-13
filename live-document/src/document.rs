@@ -1,5 +1,7 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::JsCast;
-use web_sys::HtmlTextAreaElement;
+use web_sys::{console, HtmlTextAreaElement};
 use yew::{html, Component, Context, Html, Properties};
 
 use rusty_games_library::network_manager::NetworkManager;
@@ -18,6 +20,7 @@ pub struct DocumentProps {
 pub(crate) struct Document {
     session_id: SessionId,
     network_manager: NetworkManager,
+    is_ready: Rc<RefCell<bool>>
 }
 
 impl Component for Document {
@@ -33,6 +36,23 @@ impl Component for Document {
             props.is_host,
         )
         .unwrap();
+
+        let is_ready = Rc::new(RefCell::new(false));
+        let on_open_callback = {
+            let is_ready = is_ready.clone();
+            move || {
+                web_sys::window()
+                    .unwrap()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("document-textarea")
+                    .expect("could not find textarea element by id")
+                    .dyn_ref::<HtmlTextAreaElement>()
+                    .expect("element is not a textarea")
+                    .set_disabled(false);
+                *is_ready.borrow_mut() = true;
+            }
+        };
         let on_message_callback = {
             move |message: String| {
                 web_sys::window()
@@ -47,9 +67,10 @@ impl Component for Document {
             }
         };
         network_manager
-            .start(|| {}, on_message_callback)
+            .start(on_open_callback, on_message_callback)
             .expect("couldn't start network manager");
         Self {
+            is_ready,
             session_id: props.session_id.clone(),
             network_manager,
         }
@@ -69,7 +90,7 @@ impl Component for Document {
                     .value();
                 self.network_manager
                     .send_message(&format!("x{}", textarea_value))
-                    .expect("couldn't send message");
+                    .unwrap_or_else(|_| console::error_1(&"couldn't send message yet!".to_string().into()));
             }
         }
         true
@@ -77,10 +98,16 @@ impl Component for Document {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let oninput = ctx.link().callback(|_| Self::Message::UpdateValue);
+        let disabled = !self.is_ready.borrow().clone();
+        let placeholder = if disabled {
+            "This is a live document shared with a different user.\nYou will be allowed to write once other user connects."
+        } else {
+            "This is a live document shared with a different user.\nWhat you both write will be visible to the other."
+        };
         html! {
             <main>
                 <p> { "Session id: " } { &self.session_id } </p>
-                <textarea id={ "document-textarea" } { oninput }/>
+                <textarea id={ "document-textarea" } { disabled } { placeholder } { oninput }/>
             </main>
         }
     }
