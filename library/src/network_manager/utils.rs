@@ -7,8 +7,6 @@ use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
-pub const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
     pub candidate: String,

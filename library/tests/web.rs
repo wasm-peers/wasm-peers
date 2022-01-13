@@ -14,6 +14,8 @@ fn dummy_test() {
     assert_eq!(1 + 1, 2);
 }
 
+const WS_IP_PORT: &str = "ws://0.0.0.0:9001/ws";
+
 #[wasm_bindgen_test]
 fn single_message_passes() -> Result<(), JsValue> {
     // set_panic_hook();
@@ -22,8 +24,8 @@ fn single_message_passes() -> Result<(), JsValue> {
 
     // debug!("wasm main started");
 
-    let server = NetworkManager::new("TODO-session-id".to_string(), ConnectionType::Stun);
-    let client = NetworkManager::new("TODO-session-id".to_string(), ConnectionType::Stun);
+    let server = NetworkManager::new(WS_IP_PORT, "TODO-session-id".to_string(), ConnectionType::Stun);
+    let client = NetworkManager::new(WS_IP_PORT, "TODO-session-id".to_string(), ConnectionType::Stun);
 
     let server_clone = server.clone();
     let server_on_open = move || server_clone.send_message("ping!").unwrap();

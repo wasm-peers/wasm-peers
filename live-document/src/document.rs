@@ -27,6 +27,7 @@ impl Component for Document {
     fn create(ctx: &Context<Self>) -> Self {
         let props = ctx.props();
         let mut network_manager = NetworkManager::new(
+            env!("WS_IP_PORT"),
             props.session_id.clone(),
             ConnectionType::Stun,
             props.is_host,

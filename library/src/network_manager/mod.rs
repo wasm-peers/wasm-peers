@@ -15,7 +15,7 @@ use crate::network_manager::callbacks::{
     set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
     set_websocket_on_message, set_websocket_on_open,
 };
-use crate::network_manager::utils::{create_stun_peer_connection, WS_IP_PORT};
+use crate::network_manager::utils::create_stun_peer_connection;
 
 mod callbacks;
 pub mod utils;
@@ -42,6 +42,7 @@ pub struct NetworkManager {
 
 impl NetworkManager {
     pub fn new(
+        ws_ip_address: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
         is_host: bool,
@@ -52,7 +53,7 @@ impl NetworkManager {
             ConnectionType::StunAndTurn => unimplemented!("no turn server yet!"),
         };
 
-        let websocket = WebSocket::new(WS_IP_PORT)?;
+        let websocket = WebSocket::new(ws_ip_address)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         Ok(NetworkManager {
