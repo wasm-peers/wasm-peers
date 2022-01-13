@@ -1,10 +1,10 @@
 [workspace]
 members = [
+    # core crates required for functionality
     "protocol",
     "signaling-server",
     "library",
 
-    "library-client",
-    "library-server",
+    # examples
     "live-document",
 ]
