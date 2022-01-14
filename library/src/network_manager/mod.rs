@@ -1,5 +1,5 @@
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::RwLock;
 
 use log::debug;
 use wasm_bindgen::JsValue;
@@ -37,7 +37,7 @@ pub(crate) struct NetworkManagerInner {
 
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
-    pub(crate) inner: Rc<RwLock<NetworkManagerInner>>,
+    pub(crate) inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
@@ -57,7 +57,7 @@ impl NetworkManager {
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         Ok(NetworkManager {
-            inner: Rc::new(RwLock::new(NetworkManagerInner {
+            inner: Rc::new(RefCell::new(NetworkManagerInner {
                 is_host,
                 session_id,
                 websocket,
@@ -72,12 +72,13 @@ impl NetworkManager {
         on_open_callback: impl FnMut() + Clone + 'static,
         on_message_callback: impl FnMut(String) + Clone + 'static,
     ) -> Result<(), JsValue> {
-        let network_manager_inner = self.inner.read().unwrap();
-        let is_host = network_manager_inner.is_host;
-        let websocket = network_manager_inner.websocket.clone();
-        let peer_connection = network_manager_inner.peer_connection.clone();
-        let session_id = network_manager_inner.session_id.clone();
-        std::mem::drop(network_manager_inner);
+        let NetworkManagerInner {
+            is_host,
+            websocket,
+            peer_connection,
+            session_id,
+            ..
+        } = self.inner.borrow().clone();
 
         if is_host {
             let data_channel = peer_connection.create_data_channel(&session_id);
@@ -90,7 +91,7 @@ impl NetworkManager {
             set_data_channel_on_error(&data_channel);
             set_data_channel_on_message(&data_channel, on_message_callback);
 
-            self.inner.write().unwrap().data_channel = Some(data_channel);
+            self.inner.borrow_mut().data_channel = Some(data_channel);
         } else {
             set_peer_connection_on_data_channel(
                 &peer_connection,
@@ -117,8 +118,7 @@ impl NetworkManager {
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
         debug!("server will try to send a message: {:?}", &message);
         self.inner
-            .read()
-            .unwrap()
+            .borrow()
             .data_channel
             .as_ref()
             .ok_or_else(|| JsValue::from_str("no data channel set on instance yet"))?

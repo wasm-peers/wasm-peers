@@ -10,19 +10,8 @@ const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IceCandidate {
     pub candidate: String,
-    pub sdp_mid: String,
-    pub sdp_m_line_index: u16,
-}
-
-pub fn set_panic_hook() {
-    // When the `console_error_panic_hook` feature is enabled, we can call the
-    // `set_panic_hook` function at least once during initialization, and then
-    // we will get better error messages if our code ever panics.
-    //
-    // For more details see
-    // https://github.com/rustwasm/console_error_panic_hook#readme
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
+    pub sdp_mid: Option<String>,
+    pub sdp_m_line_index: Option<u16>,
 }
 
 pub(crate) fn create_stun_peer_connection() -> Result<RtcPeerConnection, JsValue> {
@@ -47,7 +36,7 @@ pub(crate) async fn create_sdp_offer(
     let offer = JsFuture::from(peer_connection.create_offer()).await?;
     let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?
         .as_string()
-        .unwrap();
+        .expect("failed to create JS object for SDP offer");
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     local_session_description.sdp(&offer);
     JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
@@ -66,7 +55,7 @@ pub(crate) async fn create_sdp_answer(
     let answer = JsFuture::from(peer_connection.create_answer()).await?;
     let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
         .as_string()
-        .unwrap();
+        .expect("failed to create JS object for SPD answer");
 
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
     local_session_description.sdp(&answer);

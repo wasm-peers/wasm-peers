@@ -32,7 +32,7 @@ pub(crate) fn set_peer_connection_on_data_channel(
         set_data_channel_on_error(&data_channel);
         set_data_channel_on_message(&data_channel, on_message_callback.clone());
 
-        network_manager.inner.write().unwrap().data_channel = Some(data_channel);
+        network_manager.inner.borrow_mut().data_channel = Some(data_channel);
     }) as Box<dyn FnMut(RtcDataChannelEvent)>);
     peer_connection.set_ondatachannel(Some(on_datachannel.as_ref().unchecked_ref()));
     on_datachannel.forget();
@@ -49,22 +49,27 @@ pub(crate) fn set_websocket_on_message(
         let peer_connection_clone = peer_connection;
         let onmessage_callback = Closure::wrap(Box::new(move |ev: MessageEvent| {
             if let Ok(message) = ev.data().dyn_into::<JsString>() {
-                let message = serde_json_wasm::from_str(&String::from(message)).unwrap();
-
-                let websocket_clone = websocket_clone.clone();
-                let peer_connection_clone = peer_connection_clone.clone();
-                wasm_bindgen_futures::spawn_local(async move {
-                    handle_websocket_message(
-                        message,
-                        peer_connection_clone,
-                        websocket_clone,
-                        is_host,
-                    )
-                    .await
-                    .unwrap_or_else(|error| {
-                        error!("error handling websocket message: {:?}", error);
-                    })
-                });
+                match serde_json_wasm::from_str(&String::from(message)) {
+                    Ok(message) => {
+                        let websocket_clone = websocket_clone.clone();
+                        let peer_connection_clone = peer_connection_clone.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            handle_websocket_message(
+                                message,
+                                peer_connection_clone,
+                                websocket_clone,
+                                is_host,
+                            )
+                            .await
+                            .unwrap_or_else(|error| {
+                                error!("error handling websocket message: {:?}", error);
+                            })
+                        });
+                    }
+                    Err(_) => {
+                        error!("failed to deserialize onmessage callback content.");
+                    }
+                }
             }
         }) as Box<dyn FnMut(MessageEvent)>);
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -78,8 +83,8 @@ pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId
         let websocket_clone = websocket.clone();
         let onopen_callback = Closure::wrap(Box::new(move |_| {
             let signal_message = SignalMessage::SessionStartOrJoin(session_id.clone());
-            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-            websocket_clone.send_with_str(&signal_message).unwrap();
+            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed serializing SignalMessage");
+            websocket_clone.send_with_str(&signal_message).expect("failed sending start-or-join message to the websocket");
         }) as Box<dyn FnMut(JsValue)>);
         websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
         onopen_callback.forget();
@@ -172,17 +177,17 @@ pub(crate) fn set_peer_connection_on_ice_candidate(
         if let Some(candidate) = ev.candidate() {
             let signaled_candidate = IceCandidate {
                 candidate: candidate.candidate(),
-                sdp_mid: candidate.sdp_mid().unwrap(),
-                sdp_m_line_index: candidate.sdp_m_line_index().unwrap(),
+                sdp_mid: candidate.sdp_mid(),
+                sdp_m_line_index: candidate.sdp_m_line_index(),
             };
             debug!("signaled candidate: {:#?}", signaled_candidate);
-            let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate).unwrap();
+            let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate).expect("failed to serialize IceCandidate");
 
             let signal_message =
                 SignalMessage::IceCandidate(signaled_candidate, session_id_clone.clone());
-            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
 
-            websocket_clone.send_with_str(&signal_message).unwrap();
+            websocket_clone.send_with_str(&signal_message).unwrap_or_else(|| error!("failed to send one of the ICE candidates"));
         }
     }) as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
     peer_connection.set_onicecandidate(Some(on_ice_candidate.as_ref().unchecked_ref()));
@@ -206,7 +211,7 @@ pub(crate) async fn handle_websocket_message(
             if is_host {
                 let offer = create_sdp_offer(peer_connection.clone()).await?;
                 let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
-                let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
+                let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
                 websocket.send_with_str(&signal_message)?;
                 debug!("(is_host: {}) sent an offer successfully", is_host);
             }
@@ -214,21 +219,21 @@ pub(crate) async fn handle_websocket_message(
         SignalMessage::SdpOffer(offer, session_id) => {
             let answer = create_sdp_answer(peer_connection.clone(), offer)
                 .await
-                .unwrap();
+                .expect("failed to create SDP answer");
             debug!(
                 "(is_host: {}) received an offer and created an answer: {}",
                 is_host, answer
             );
             let signal_message = SignalMessage::SdpAnswer(answer, session_id);
-            let signal_message = serde_json_wasm::to_string(&signal_message).unwrap();
-            websocket.send_with_str(&signal_message).unwrap();
+            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
+            websocket.send_with_str(&signal_message).expect("failed to send SPD answer to signaling server");
         }
         SignalMessage::SdpAnswer(answer, session_id) => {
             let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
             remote_session_description.sdp(&answer);
             JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
                 .await
-                .unwrap();
+                .expect("failed to set remote descripiton");
             debug!(
                 "received answer from peer and set remote description: {}, {}",
                 answer, session_id
@@ -239,19 +244,19 @@ pub(crate) async fn handle_websocket_message(
                 "(is host: {}) peer received ice candidate: {}",
                 is_host, &ice_candidate
             );
-            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).unwrap();
+            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).expect("failed to deserialize IceCandidate");
 
             let mut rtc_candidate = RtcIceCandidateInit::new("");
             rtc_candidate.candidate(&ice_candidate.candidate);
-            rtc_candidate.sdp_m_line_index(Some(ice_candidate.sdp_m_line_index));
-            rtc_candidate.sdp_mid(Some(&ice_candidate.sdp_mid));
+            rtc_candidate.sdp_m_line_index(ice_candidate.sdp_m_line_index);
+            rtc_candidate.sdp_mid(ice_candidate.sdp_mid.as_deref());
 
-            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).unwrap();
+            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).expect("failed to create new RtcIceCandidate");
             JsFuture::from(
                 peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
             )
             .await
-            .unwrap();
+            .expect("failed to add ICE candidate");
             debug!(
                 "(is host: {}) added ice candidate {:?}",
                 is_host, ice_candidate

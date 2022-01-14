@@ -1,4 +1,4 @@
-use rusty_games_library::{set_panic_hook, SessionId};
+use rusty_games_library::SessionId;
 use yew::{html, Component, Context, Html};
 use yew_router::prelude::*;
 
@@ -59,7 +59,6 @@ fn switch(routes: &Route) -> Html {
 }
 
 fn main() {
-    set_panic_hook();
     wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
 
     yew::start_app::<App>();

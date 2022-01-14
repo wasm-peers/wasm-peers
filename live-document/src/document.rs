@@ -4,8 +4,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{console, HtmlTextAreaElement};
 use yew::{html, Component, Context, Html, Properties};
 
-use rusty_games_library::network_manager::NetworkManager;
-use rusty_games_library::{ConnectionType, SessionId};
+use rusty_games_library::{ConnectionType, NetworkManager, SessionId};
 
 pub(crate) enum DocumentMsg {
     UpdateValue,
