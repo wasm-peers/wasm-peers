@@ -20,7 +20,7 @@ pub struct DocumentProps {
 pub(crate) struct Document {
     session_id: SessionId,
     network_manager: NetworkManager,
-    is_ready: Rc<RefCell<bool>>
+    is_ready: Rc<RefCell<bool>>,
 }
 
 impl Component for Document {
@@ -63,7 +63,7 @@ impl Component for Document {
                     .expect("could not find textarea element by id")
                     .dyn_ref::<HtmlTextAreaElement>()
                     .expect("element is not a textarea")
-                    .set_value(message.strip_prefix("x").unwrap());
+                    .set_value(message.strip_prefix('x').unwrap());
             }
         };
         network_manager
@@ -90,7 +90,9 @@ impl Component for Document {
                     .value();
                 self.network_manager
                     .send_message(&format!("x{}", textarea_value))
-                    .unwrap_or_else(|_| console::error_1(&"couldn't send message yet!".to_string().into()));
+                    .unwrap_or_else(|_| {
+                        console::error_1(&"couldn't send message yet!".to_string().into())
+                    });
             }
         }
         true
@@ -98,7 +100,7 @@ impl Component for Document {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let oninput = ctx.link().callback(|_| Self::Message::UpdateValue);
-        let disabled = !self.is_ready.borrow().clone();
+        let disabled = !*self.is_ready.borrow();
         let placeholder = if disabled {
             "This is a live document shared with a different user.\nYou will be allowed to write once other user connects."
         } else {

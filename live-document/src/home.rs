@@ -42,11 +42,10 @@ impl Component for Home {
                 });
             })
         };
-        let update_input = ctx.link().callback(|e: InputEvent| {
-            HomeMsg::UpdateInput(e.data().unwrap_or_else(|| String::new()))
-        });
+        let update_input = ctx
+            .link()
+            .callback(|e: InputEvent| HomeMsg::UpdateInput(e.data().unwrap_or_else(String::new)));
         let join_existing = {
-            let history = history.clone();
             let session_id = self.input.clone();
             Callback::once(move |_| {
                 history.push(Route::Document {

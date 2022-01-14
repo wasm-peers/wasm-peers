@@ -22,14 +22,24 @@ fn single_message_passes() -> Result<(), JsValue> {
     // wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
     // debug!("wasm main started");
 
-    let server = NetworkManager::new(WS_IP_PORT, "TODO-session-id".to_string(), ConnectionType::Stun, true);
+    let server = NetworkManager::new(
+        WS_IP_PORT,
+        "TODO-session-id".to_string(),
+        ConnectionType::Stun,
+        true,
+    );
     let server_clone = server.clone();
     let server_on_open = move || server_clone.send_message("ping!").unwrap();
     let server_on_message =
         |message| console::log_1(&format!("server received message: {}", message).into());
     server.start(server_on_open, server_on_message, true)?;
 
-    let client = NetworkManager::new(WS_IP_PORT, "TODO-session-id".to_string(), ConnectionType::Stun, false);
+    let client = NetworkManager::new(
+        WS_IP_PORT,
+        "TODO-session-id".to_string(),
+        ConnectionType::Stun,
+        false,
+    );
     let client_on_open = || { /* do nothing */ };
     let client_clone = client.clone();
     let client_on_message = |message| {
