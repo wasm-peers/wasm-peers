@@ -2,15 +2,16 @@ use js_sys::JsString;
 use log::{debug, error, info};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindgen_futures::JsFuture;
+
 use web_sys::{
-    MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit,
-    RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
+    MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcPeerConnection,
+    RtcPeerConnectionIceEvent, WebSocket,
 };
 
 use rusty_games_protocol::{SessionId, SignalMessage};
 
-use crate::network_manager::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
+use crate::network_manager::utils::IceCandidate;
+use crate::network_manager::websocket_handler;
 use crate::NetworkManager;
 
 /// also calls:
@@ -54,7 +55,7 @@ pub(crate) fn set_websocket_on_message(
                         let websocket_clone = websocket_clone.clone();
                         let peer_connection_clone = peer_connection_clone.clone();
                         wasm_bindgen_futures::spawn_local(async move {
-                            handle_websocket_message(
+                            websocket_handler::handle_websocket_message(
                                 message,
                                 peer_connection_clone,
                                 websocket_clone,
@@ -83,8 +84,11 @@ pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId
         let websocket_clone = websocket.clone();
         let onopen_callback = Closure::wrap(Box::new(move |_| {
             let signal_message = SignalMessage::SessionStartOrJoin(session_id.clone());
-            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed serializing SignalMessage");
-            websocket_clone.send_with_str(&signal_message).expect("failed sending start-or-join message to the websocket");
+            let signal_message = serde_json_wasm::to_string(&signal_message)
+                .expect("failed serializing SignalMessage");
+            websocket_clone
+                .send_with_str(&signal_message)
+                .expect("failed sending start-or-join message to the websocket");
         }) as Box<dyn FnMut(JsValue)>);
         websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
         onopen_callback.forget();
@@ -181,94 +185,19 @@ pub(crate) fn set_peer_connection_on_ice_candidate(
                 sdp_m_line_index: candidate.sdp_m_line_index(),
             };
             debug!("signaled candidate: {:#?}", signaled_candidate);
-            let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate).expect("failed to serialize IceCandidate");
+            let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate)
+                .expect("failed to serialize IceCandidate");
 
             let signal_message =
                 SignalMessage::IceCandidate(signaled_candidate, session_id_clone.clone());
-            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
+            let signal_message = serde_json_wasm::to_string(&signal_message)
+                .expect("failed to serialize SignalMessage");
 
-            websocket_clone.send_with_str(&signal_message).unwrap_or_else(|| error!("failed to send one of the ICE candidates"));
+            websocket_clone
+                .send_with_str(&signal_message)
+                .unwrap_or_else(|_| error!("failed to send one of the ICE candidates"));
         }
     }) as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
     peer_connection.set_onicecandidate(Some(on_ice_candidate.as_ref().unchecked_ref()));
     on_ice_candidate.forget();
-}
-
-/// basically a state automata spread across host, client and signaling server
-/// handling each step in session and then WebRTC setup
-pub(crate) async fn handle_websocket_message(
-    message: SignalMessage,
-    peer_connection: RtcPeerConnection,
-    websocket: WebSocket,
-    is_host: bool,
-) -> Result<(), JsValue> {
-    match message {
-        SignalMessage::SessionStartOrJoin(_session_id) => {
-            error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
-        }
-        SignalMessage::SessionReady(session_id, is_host) => {
-            info!("peer received info that session is ready {}", session_id);
-            if is_host {
-                let offer = create_sdp_offer(peer_connection.clone()).await?;
-                let signal_message = SignalMessage::SdpOffer(offer, session_id.clone());
-                let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
-                websocket.send_with_str(&signal_message)?;
-                debug!("(is_host: {}) sent an offer successfully", is_host);
-            }
-        }
-        SignalMessage::SdpOffer(offer, session_id) => {
-            let answer = create_sdp_answer(peer_connection.clone(), offer)
-                .await
-                .expect("failed to create SDP answer");
-            debug!(
-                "(is_host: {}) received an offer and created an answer: {}",
-                is_host, answer
-            );
-            let signal_message = SignalMessage::SdpAnswer(answer, session_id);
-            let signal_message = serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
-            websocket.send_with_str(&signal_message).expect("failed to send SPD answer to signaling server");
-        }
-        SignalMessage::SdpAnswer(answer, session_id) => {
-            let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
-            remote_session_description.sdp(&answer);
-            JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
-                .await
-                .expect("failed to set remote descripiton");
-            debug!(
-                "received answer from peer and set remote description: {}, {}",
-                answer, session_id
-            );
-        }
-        SignalMessage::IceCandidate(ice_candidate, _session_id) => {
-            debug!(
-                "(is host: {}) peer received ice candidate: {}",
-                is_host, &ice_candidate
-            );
-            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate).expect("failed to deserialize IceCandidate");
-
-            let mut rtc_candidate = RtcIceCandidateInit::new("");
-            rtc_candidate.candidate(&ice_candidate.candidate);
-            rtc_candidate.sdp_m_line_index(ice_candidate.sdp_m_line_index);
-            rtc_candidate.sdp_mid(ice_candidate.sdp_mid.as_deref());
-
-            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate).expect("failed to create new RtcIceCandidate");
-            JsFuture::from(
-                peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
-            )
-            .await
-            .expect("failed to add ICE candidate");
-            debug!(
-                "(is host: {}) added ice candidate {:?}",
-                is_host, ice_candidate
-            );
-        }
-        SignalMessage::Error(error, session_id) => {
-            error!(
-                "signaling server returned error: session id: {}, error:{}",
-                session_id, error
-            );
-        }
-    }
-
-    Ok(())
 }

@@ -19,6 +19,7 @@ use crate::network_manager::utils::create_stun_peer_connection;
 
 mod callbacks;
 pub mod utils;
+mod websocket_handler;
 
 pub enum ConnectionType {
     Local,

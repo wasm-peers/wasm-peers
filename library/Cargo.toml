@@ -48,6 +48,9 @@ features = [
     "RtcConfiguration",
     "RtcIceGatheringState",
 
+    # Tests
+    "RtcSessionDescription",
+
     # WebSocket features
     "WebSocket",
     "BinaryType",

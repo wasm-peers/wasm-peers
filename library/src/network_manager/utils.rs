@@ -63,3 +63,44 @@ pub(crate) async fn create_sdp_answer(
 
     Ok(answer)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
+    use web_sys::{RtcIceConnectionState, RtcIceGatheringState};
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn test_create_stun_peer_connection_is_successfull() {
+        let peer_connection =
+            create_stun_peer_connection().expect("creating peer connection failed!");
+        assert_eq!(
+            peer_connection.ice_connection_state(),
+            RtcIceConnectionState::New
+        );
+        assert_eq!(
+            peer_connection.ice_gathering_state(),
+            RtcIceGatheringState::New
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_create_sdp_offer_is_successfull() {
+        let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
+        let _offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
+        assert!(peer_connection.local_description().is_some());
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_create_sdp_answer_is_successfull() {
+        let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
+        let offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
+        let _answer = create_sdp_answer(peer_connection.clone(), offer)
+            .await
+            .unwrap();
+        assert!(peer_connection.local_description().is_some());
+        assert!(peer_connection.remote_description().is_some());
+    }
+}
