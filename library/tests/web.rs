@@ -19,7 +19,6 @@ fn network_manager_starts_successfully() {
         WS_IP_ADDRESS,
         "dummy-session-id".to_string(),
         ConnectionType::Stun,
-        true,
     )
     .unwrap();
     server.start(|| {}, |_| {}).unwrap();
@@ -34,7 +33,6 @@ fn single_message_passes_both_ways() {
         WS_IP_ADDRESS,
         "TODO-session-id".to_string(),
         ConnectionType::Stun,
-        true,
     )
     .unwrap();
 
@@ -53,7 +51,6 @@ fn single_message_passes_both_ways() {
         WS_IP_ADDRESS,
         "TODO-session-id".to_string(),
         ConnectionType::Stun,
-        false,
     )
     .unwrap();
     let client_on_open = || { /* do nothing */ };

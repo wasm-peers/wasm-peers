@@ -33,7 +33,6 @@ pub enum ConnectionType {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkManagerInner {
-    is_host: bool,
     session_id: String,
     websocket: WebSocket,
     peer_connection: RtcPeerConnection,
@@ -66,7 +65,6 @@ impl NetworkManager {
         ws_ip_address: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
-        is_host: bool,
     ) -> Result<Self, JsValue> {
         let peer_connection = match connection_type {
             ConnectionType::Local => RtcPeerConnection::new()?,
@@ -79,7 +77,6 @@ impl NetworkManager {
 
         Ok(NetworkManager {
             inner: Rc::new(RefCell::new(NetworkManagerInner {
-                is_host,
                 session_id,
                 websocket,
                 peer_connection,
@@ -97,33 +94,32 @@ impl NetworkManager {
         on_message_callback: impl FnMut(String) + Clone + 'static,
     ) -> Result<(), JsValue> {
         let NetworkManagerInner {
-            is_host,
             websocket,
             peer_connection,
             session_id,
             ..
         } = self.inner.borrow().clone();
 
-        if is_host {
+        // if is_host {
             let data_channel = peer_connection.create_data_channel(&session_id);
             debug!(
                 "data_channel created with label: {:?}",
                 data_channel.label()
             );
 
-            set_data_channel_on_open(&data_channel, on_open_callback);
+            set_data_channel_on_open(&data_channel, on_open_callback.clone());
             set_data_channel_on_error(&data_channel);
-            set_data_channel_on_message(&data_channel, on_message_callback);
+            set_data_channel_on_message(&data_channel, on_message_callback.clone());
 
             self.inner.borrow_mut().data_channel = Some(data_channel);
-        } else {
+        // } else {
             set_peer_connection_on_data_channel(
                 &peer_connection,
                 self.clone(),
                 on_open_callback,
                 on_message_callback,
             );
-        }
+        // }
 
         set_peer_connection_on_ice_candidate(
             &peer_connection,
@@ -134,7 +130,7 @@ impl NetworkManager {
         set_peer_connection_on_ice_gathering_state_change(&peer_connection);
         set_peer_connection_on_negotiation_needed(&peer_connection);
         set_websocket_on_open(&websocket, session_id);
-        set_websocket_on_message(&websocket, peer_connection, is_host);
+        set_websocket_on_message(&websocket, peer_connection);
 
         Ok(())
     }

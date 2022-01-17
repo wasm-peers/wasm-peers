@@ -14,7 +14,6 @@ pub(crate) async fn handle_websocket_message(
     message: SignalMessage,
     peer_connection: RtcPeerConnection,
     websocket: WebSocket,
-    is_host: bool,
 ) -> Result<(), JsValue> {
     match message {
         SignalMessage::SessionStartOrJoin(_session_id) => {
@@ -36,8 +35,8 @@ pub(crate) async fn handle_websocket_message(
                 .await
                 .expect("failed to create SDP answer");
             debug!(
-                "(is_host: {}) received an offer and created an answer: {}",
-                is_host, answer
+                "received an offer and created an answer: {}",
+                answer
             );
             let signal_message = SignalMessage::SdpAnswer(answer, session_id);
             let signal_message = serde_json_wasm::to_string(&signal_message)
@@ -59,8 +58,8 @@ pub(crate) async fn handle_websocket_message(
         }
         SignalMessage::IceCandidate(ice_candidate, _session_id) => {
             debug!(
-                "(is host: {}) peer received ice candidate: {}",
-                is_host, &ice_candidate
+                "peer received ice candidate: {}",
+                &ice_candidate
             );
             let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)
                 .expect("failed to deserialize IceCandidate");
@@ -78,8 +77,8 @@ pub(crate) async fn handle_websocket_message(
             .await
             .expect("failed to add ICE candidate");
             debug!(
-                "(is host: {}) added ice candidate {:?}",
-                is_host, ice_candidate
+                "added ice candidate {:?}",
+                ice_candidate
             );
         }
         SignalMessage::Error(error, session_id) => {
@@ -119,7 +118,7 @@ mod test {
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         // FIXME: this fails because peer_connection state gets modified in other tests
-        handle_websocket_message(message, peer_connection.clone(), websocket, true).await.unwrap();
+        handle_websocket_message(message, peer_connection.clone(), websocket).await.unwrap();
         assert!(peer_connection.local_description().is_some());
     }
 }

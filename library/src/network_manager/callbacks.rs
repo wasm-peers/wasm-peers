@@ -43,7 +43,6 @@ pub(crate) fn set_peer_connection_on_data_channel(
 pub(crate) fn set_websocket_on_message(
     websocket: &WebSocket,
     peer_connection: RtcPeerConnection,
-    is_host: bool,
 ) {
     {
         let websocket_clone = websocket.clone();
@@ -59,7 +58,6 @@ pub(crate) fn set_websocket_on_message(
                                 message,
                                 peer_connection_clone,
                                 websocket_clone,
-                                is_host,
                             )
                             .await
                             .unwrap_or_else(|error| {
