@@ -8,7 +8,7 @@ use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct IceCandidate {
+pub(crate) struct IceCandidate {
     pub candidate: String,
     pub sdp_mid: Option<String>,
     pub sdp_m_line_index: Option<u16>,

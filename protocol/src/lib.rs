@@ -1,8 +1,17 @@
+/*!
+
+*/
+
+#![deny(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 
 /// Unique identifier of signaling session that each user provides
 /// when communicating with the signaling server
 pub type SessionId = String;
+
+/// Unique identifier specifying which peer is host and will be creating an offer,
+/// and which will await it.
 pub type IsHost = bool;
 
 /// Enum used by all Client, Mini-server and Signaling server to communicate with each other

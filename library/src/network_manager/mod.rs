@@ -21,9 +21,13 @@ mod callbacks;
 pub mod utils;
 mod websocket_handler;
 
+/// Specifies what kind of peer connection to create
 pub enum ConnectionType {
+    /// Within local network
     Local,
+    /// Setup with STUN server, WAN capabilities but can fail
     Stun,
+    /// Setup with STUN and TURN servers, will fallback to TURN if needed, most stable connection
     StunAndTurn,
 }
 
@@ -36,12 +40,28 @@ pub(crate) struct NetworkManagerInner {
     pub(crate) data_channel: Option<RtcDataChannel>,
 }
 
+/// WebRTC data channel communication abstracted to a single class.
+/// All setup is handled internally, you must only provide callbacks
+/// for when the connection opens and for handling incoming messages.
+/// It also provides a method of sending data to the other end of the connection.
+///
+/// Only works with `rusty-games-signaling-server` signaling server instance,
+/// whose full ip address must be provided.
+///
+/// Startup flow is divided into two methods [NetworkManager::new] and [NetworkManager::start]
+/// to allow possibility of referring to network manger itself from the callbacks.
+///
+/// This class is a cloneable pointer to the underlying resource and can be cloned freely.
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
     pub(crate) inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
+    /// Creates an instance with all resources required to create a connection.
+    /// Requires an ip address of an signaling server instance,
+    /// session id by which it will identify connecting pair of peers
+    /// and a flag to decide, which peer will be creating the offer.
     pub fn new(
         ws_ip_address: &str,
         session_id: SessionId,
@@ -68,6 +88,9 @@ impl NetworkManager {
         })
     }
 
+    /// Second part of the setup that begins the actual connection.
+    /// Requires specifying a callbacks that are guaranteed to run
+    /// when the connection opens and on each message received.
     pub fn start(
         &mut self,
         on_open_callback: impl FnMut() + Clone + 'static,
@@ -116,6 +139,10 @@ impl NetworkManager {
         Ok(())
     }
 
+    /// Send message to the other end of the connection.
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_message_callback` triggers.
+    /// Otherwise it will result in an error.
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
         debug!("server will try to send a message: {:?}", &message);
         self.inner
