@@ -21,7 +21,6 @@ log = "0.4"
 wasm-logger = "0.2"
 uuid = { version = "0.8", features = ["v4", "stdweb"] }
 
-
 rusty-games-protocol = {path = "../protocol"}
 
 [dependencies.web-sys]

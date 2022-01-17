@@ -33,13 +33,27 @@ pub(crate) fn create_stun_peer_connection() -> Result<RtcPeerConnection, JsValue
 pub(crate) async fn create_sdp_offer(
     peer_connection: RtcPeerConnection,
 ) -> Result<String, JsValue> {
-    let offer = JsFuture::from(peer_connection.create_offer()).await?;
+    let offer = JsFuture::from(peer_connection.create_offer())
+        .await
+        .map_err(|error| {
+            JsValue::from_str(&format!(
+                "failed to create an SDP offer: {}",
+                error.as_string().unwrap_or_default()
+            ))
+        })?;
     let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?
         .as_string()
         .expect("failed to create JS object for SDP offer");
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     local_session_description.sdp(&offer);
-    JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
+    JsFuture::from(peer_connection.set_local_description(&local_session_description))
+        .await
+        .map_err(|error| {
+            JsValue::from_str(&format!(
+                "failed to set local description: {}",
+                error.as_string().unwrap_or_default()
+            ))
+        })?;
 
     Ok(offer)
 }
@@ -73,7 +87,7 @@ mod test {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_create_stun_peer_connection_is_successfull() {
+    fn test_create_stun_peer_connection_is_successful() {
         let peer_connection =
             create_stun_peer_connection().expect("creating peer connection failed!");
         assert_eq!(
@@ -87,14 +101,14 @@ mod test {
     }
 
     #[wasm_bindgen_test]
-    async fn test_create_sdp_offer_is_successfull() {
+    async fn test_create_sdp_offer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
         let _offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
         assert!(peer_connection.local_description().is_some());
     }
 
     #[wasm_bindgen_test]
-    async fn test_create_sdp_answer_is_successfull() {
+    async fn test_create_sdp_answer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
         let offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
         let _answer = create_sdp_answer(peer_connection.clone(), offer)

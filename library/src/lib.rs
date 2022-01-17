@@ -1,5 +1,3 @@
-mod mini_client;
-mod mini_server;
 mod network_manager;
 
 pub use crate::network_manager::{ConnectionType, NetworkManager};

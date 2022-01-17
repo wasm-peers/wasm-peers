@@ -17,7 +17,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn network_manager_starts_successfully() {
     let mut server = NetworkManager::new(
         WS_IP_ADDRESS,
-        "TODO-session-id".to_string(),
+        "dummy-session-id".to_string(),
         ConnectionType::Stun,
         true,
     )
