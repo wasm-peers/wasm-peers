@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
-use web_sys::{console, HtmlTextAreaElement};
-use yew::{html, Component, Context, Html, Properties};
+use web_sys::{console, HtmlTextAreaElement, UrlSearchParams};
+use yew::{html, Component, Context, Html};
+use serde::{Serialize, Deserialize};
 
 use rusty_games_library::{ConnectionType, NetworkManager, SessionId};
 
@@ -10,10 +11,15 @@ pub(crate) enum DocumentMsg {
     UpdateValue,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Properties)]
-pub struct DocumentProps {
+#[derive(Serialize, Deserialize)]
+pub struct DocumentQuery {
     pub session_id: SessionId,
-    pub is_host: bool,
+}
+
+impl DocumentQuery {
+    pub(crate) fn new(session_id: SessionId) -> Self {
+        DocumentQuery { session_id }
+    }
 }
 
 pub(crate) struct Document {
@@ -22,17 +28,21 @@ pub(crate) struct Document {
     is_ready: Rc<RefCell<bool>>,
 }
 
+fn get_queries() -> UrlSearchParams {
+    let search = web_sys::window().unwrap().location().search().unwrap();
+    UrlSearchParams::new_with_str(&search).unwrap()
+}
+
 impl Component for Document {
     type Message = DocumentMsg;
-    type Properties = DocumentProps;
+    type Properties = ();
 
-    fn create(ctx: &Context<Self>) -> Self {
-        let props = ctx.props();
+    fn create(_ctx: &Context<Self>) -> Self {
+        let session_id = get_queries().get("session_id").unwrap();
         let mut network_manager = NetworkManager::new(
             env!("WS_IP_PORT"),
-            props.session_id.clone(),
+            session_id.clone(),
             ConnectionType::Stun,
-            props.is_host,
         )
         .unwrap();
 
@@ -70,7 +80,7 @@ impl Component for Document {
             .expect("couldn't start network manager");
         Self {
             is_ready,
-            session_id: props.session_id.clone(),
+            session_id,
             network_manager,
         }
     }

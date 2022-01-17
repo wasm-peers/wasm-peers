@@ -1,4 +1,3 @@
-use rusty_games_library::SessionId;
 use yew::{html, Component, Context, Html};
 use yew_router::prelude::*;
 
@@ -12,11 +11,8 @@ mod home;
 enum Route {
     #[at("/")]
     Home,
-    #[at("/document/:session_id/:is_host")]
-    Document {
-        session_id: SessionId,
-        is_host: bool,
-    },
+    #[at("/document")]
+    Document,
 }
 
 struct App {}
@@ -49,11 +45,8 @@ fn switch(routes: &Route) -> Html {
         Route::Home => {
             html! { <Home /> }
         }
-        Route::Document {
-            session_id,
-            is_host,
-        } => {
-            html! { <Document {session_id} {is_host} /> }
+        Route::Document  => {
+            html! { <Document /> }
         }
     }
 }
