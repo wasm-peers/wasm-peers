@@ -8,12 +8,11 @@ use web_sys::{
     RtcPeerConnectionIceEvent, WebSocket,
 };
 
-use rusty_games_protocol::{SessionId};
 use rusty_games_protocol::one_to_one::SignalMessage;
+use rusty_games_protocol::SessionId;
 
+use crate::one_to_one::{websocket_handler, NetworkManager};
 use crate::utils::IceCandidate;
-use crate::one_to_one::websocket_handler;
-use crate::NetworkManager;
 
 /// also calls:
 /// * set_data_channel_on_open

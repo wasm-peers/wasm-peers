@@ -1,12 +1,12 @@
 use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 use ::log::{debug, error, info};
+use rusty_games_protocol::one_to_one::SignalMessage;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit,
     WebSocket,
 };
-use rusty_games_protocol::one_to_one::SignalMessage;
 
 /// basically a state automata spread across host, client and signaling server
 /// handling each step in session and then WebRTC setup
@@ -22,8 +22,8 @@ pub(crate) async fn handle_websocket_message(
         SignalMessage::SessionReady(session_id, is_host) => {
             info!("peer received info that session is ready {:?}", session_id);
             if is_host {
-                let offer = create_sdp_offer(peer_connection.clone()).await?;
-                let signal_message = SignalMessage::SdpOffer( session_id.clone(), offer);
+                let offer = create_sdp_offer(&peer_connection).await?;
+                let signal_message = SignalMessage::SdpOffer(session_id.clone(), offer);
                 let signal_message = serde_json_wasm::to_string(&signal_message)
                     .expect("failed to serialize SignalMessage");
                 websocket.send_with_str(&signal_message)?;
@@ -31,7 +31,7 @@ pub(crate) async fn handle_websocket_message(
             }
         }
         SignalMessage::SdpOffer(session_id, offer) => {
-            let answer = create_sdp_answer(peer_connection.clone(), offer)
+            let answer = create_sdp_answer(&peer_connection, offer)
                 .await
                 .expect("failed to create SDP answer");
             debug!("received an offer and created an answer: {}", answer);
@@ -87,8 +87,8 @@ pub(crate) async fn handle_websocket_message(
 mod test {
     use super::*;
     use mockall::mock;
-    use wasm_bindgen_test::{wasm_bindgen_test_configure};
-    
+    use wasm_bindgen_test::wasm_bindgen_test_configure;
+
     use rusty_games_protocol::SessionId;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -99,7 +99,8 @@ mod test {
 
     // #[wasm_bindgen_test]
     async fn test_handle_session_ready_signal_is_successful() {
-        let message = SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
+        let message =
+            SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
         let peer_connection = RtcPeerConnection::new().unwrap();
 
         // TODO: this should be mocked, but how do you pass a mock to a function expecting different type?

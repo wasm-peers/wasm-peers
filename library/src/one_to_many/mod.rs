@@ -4,26 +4,26 @@ mod websocket_handler;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use std::rc::Rc;
+use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
+use crate::ConnectionType;
 use log::debug;
+use rusty_games_protocol::{SessionId, UserId};
+use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
-use rusty_games_protocol::{SessionId, UserId};
-use crate::ConnectionType;
-use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
-
 
 #[derive(Debug, Clone)]
 struct Connection {
     peer_connection: RtcPeerConnection,
-    data_channel: RtcDataChannel,
+    data_channel: Option<RtcDataChannel>,
 }
 
 impl Connection {
-    fn new(peer_connection: RtcPeerConnection, data_channel: RtcDataChannel) -> Self {
-       Connection {
-           peer_connection, data_channel
-       }
+    fn new(peer_connection: RtcPeerConnection, data_channel: Option<RtcDataChannel>) -> Self {
+        Connection {
+            peer_connection,
+            data_channel,
+        }
     }
 }
 
@@ -38,7 +38,7 @@ struct NetworkManagerInner {
 
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
-    inner: Rc<RefCell<NetworkManagerInner>>
+    inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
@@ -64,15 +64,21 @@ impl NetworkManager {
 
     pub fn start(
         &mut self,
-        on_open_callback: impl FnMut(usize) + Clone + 'static,
-        on_message_callback: impl FnMut(usize, String) + Clone + 'static,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
     ) -> Result<(), JsValue> {
         let websocket = self.inner.borrow().websocket.clone();
         let session_id = self.inner.borrow().session_id.clone();
         let is_host = self.inner.borrow().is_host;
 
         set_websocket_on_open(&websocket, session_id, is_host);
-        set_websocket_on_message( &websocket, self.clone(), on_open_callback, on_message_callback, is_host);
+        set_websocket_on_message(
+            &websocket,
+            self.clone(),
+            on_open_callback,
+            on_message_callback,
+            is_host,
+        );
 
         Ok(())
     }
@@ -83,7 +89,13 @@ impl NetworkManager {
     /// Otherwise it will result in an error.
     pub fn send_message_to_all(&self, message: &str) {
         debug!("server will try to send a message: {:?}", &message);
-        for Connection { data_channel, .. } in self.inner.borrow().connections.values() {
+        for data_channel in self
+            .inner
+            .borrow()
+            .connections
+            .values()
+            .filter_map(|connection| connection.data_channel.as_ref())
+        {
             data_channel.send_with_str(message);
         }
     }

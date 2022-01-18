@@ -15,21 +15,10 @@ use crate::one_to_one::callbacks::{
     set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
     set_websocket_on_message, set_websocket_on_open,
 };
-use crate::utils::create_peer_connection;
+use crate::utils::{create_peer_connection, ConnectionType};
 
 mod callbacks;
 mod websocket_handler;
-
-/// Specifies what kind of peer connection to create
-#[derive(Debug, Clone, Copy)]
-pub enum ConnectionType {
-    /// Within local network
-    Local,
-    /// Setup with STUN server, WAN capabilities but can fail
-    Stun,
-    /// Setup with STUN and TURN servers, will fallback to TURN if needed, most stable connection
-    StunAndTurn,
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkManagerInner {

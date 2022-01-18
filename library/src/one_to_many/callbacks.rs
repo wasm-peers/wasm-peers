@@ -8,11 +8,11 @@ use web_sys::{
     RtcPeerConnectionIceEvent, WebSocket,
 };
 
-use rusty_games_protocol::{SessionId, UserId};
 use rusty_games_protocol::one_to_many::SignalMessage;
+use rusty_games_protocol::{SessionId, UserId};
 
+use crate::one_to_many::{websocket_handler, NetworkManager};
 use crate::utils::IceCandidate;
-use crate::one_to_many::{NetworkManager, websocket_handler};
 
 /// also calls:
 /// * set_data_channel_on_open
@@ -21,7 +21,7 @@ use crate::one_to_many::{NetworkManager, websocket_handler};
 pub(crate) fn set_peer_connection_on_data_channel(
     peer_connection: &RtcPeerConnection,
     client_id: UserId,
-    _network_manager: NetworkManager,
+    network_manager: NetworkManager,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
     on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
 ) {
@@ -35,8 +35,13 @@ pub(crate) fn set_peer_connection_on_data_channel(
         set_data_channel_on_error(&data_channel);
         set_data_channel_on_message(&data_channel, client_id, on_message_callback_clone.clone());
 
-        // network_manager.inner.borrow_mut().connections.data_channel = Some(data_channel);
-        // TODO: this is for client and not host, should there be different struct for that?
+        network_manager
+            .inner
+            .borrow_mut()
+            .connections
+            .get_mut(&client_id)
+            .unwrap()
+            .data_channel = Some(data_channel);
     }) as Box<dyn FnMut(RtcDataChannelEvent)>);
     peer_connection.set_ondatachannel(Some(on_datachannel.as_ref().unchecked_ref()));
     on_datachannel.forget();
@@ -46,45 +51,45 @@ pub(crate) fn set_peer_connection_on_data_channel(
 pub(crate) fn set_websocket_on_message(
     websocket: &WebSocket,
     network_manager: NetworkManager,
-    on_open_callback: impl FnMut(usize) + Clone + 'static,
-    on_message_callback: impl FnMut(usize, String) + Clone + 'static,
+    on_open_callback: impl FnMut(UserId) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
     is_host: bool,
 ) {
     let websocket_clone = websocket.clone();
     let _on_open_callback_clone = on_open_callback.clone();
     let _on_message_callback_clone = on_message_callback.clone();
     let onmessage_callback = Closure::wrap(Box::new(move |ev: MessageEvent| {
-            if let Ok(message) = ev.data().dyn_into::<JsString>() {
-                match serde_json_wasm::from_str(&String::from(message)) {
-                    Ok(message) => {
-                        let network_manager = network_manager.clone();
-                        let websocket = websocket_clone.clone();
-                        let on_open_callback_clone = on_open_callback.clone();
-                        let on_message_callback_clone = on_message_callback.clone();
-                        wasm_bindgen_futures::spawn_local(async move {
-                            websocket_handler::handle_websocket_message(
-                                network_manager,
-                                message,
-                                websocket,
-                                on_open_callback_clone,
-                                on_message_callback_clone,
-                                is_host
-                            )
-                            .await
-                            .unwrap_or_else(|error| {
-                                error!("error handling websocket message: {:?}", error);
-                            })
-                        });
-                    }
-                    Err(_) => {
-                        error!("failed to deserialize onmessage callback content.");
-                    }
+        if let Ok(message) = ev.data().dyn_into::<JsString>() {
+            match serde_json_wasm::from_str(&String::from(message)) {
+                Ok(message) => {
+                    let network_manager = network_manager.clone();
+                    let websocket = websocket_clone.clone();
+                    let on_open_callback_clone = on_open_callback.clone();
+                    let on_message_callback_clone = on_message_callback.clone();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        websocket_handler::handle_websocket_message(
+                            network_manager,
+                            message,
+                            websocket,
+                            on_open_callback_clone,
+                            on_message_callback_clone,
+                            is_host,
+                        )
+                        .await
+                        .unwrap_or_else(|error| {
+                            error!("error handling websocket message: {:?}", error);
+                        })
+                    });
+                }
+                Err(_) => {
+                    error!("failed to deserialize onmessage callback content.");
                 }
             }
-        }) as Box<dyn FnMut(MessageEvent)>);
-        websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
-        onmessage_callback.forget();
-    }
+        }
+    }) as Box<dyn FnMut(MessageEvent)>);
+    websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+    onmessage_callback.forget();
+}
 
 /// once websocket is open, send a request to start or join a session
 pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_host: bool) {
@@ -199,8 +204,11 @@ pub(crate) fn set_peer_connection_on_ice_candidate(
             let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate)
                 .expect("failed to serialize IceCandidate");
 
-            let signal_message =
-                SignalMessage::IceCandidate(session_id_clone.clone(), client_id, signaled_candidate);
+            let signal_message = SignalMessage::IceCandidate(
+                session_id_clone.clone(),
+                client_id,
+                signaled_candidate,
+            );
             let signal_message = serde_json_wasm::to_string(&signal_message)
                 .expect("failed to serialize SignalMessage");
 

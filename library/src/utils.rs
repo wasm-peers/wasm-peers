@@ -4,7 +4,6 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
-use crate::ConnectionType;
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
@@ -15,7 +14,20 @@ pub(crate) struct IceCandidate {
     pub sdp_m_line_index: Option<u16>,
 }
 
-pub(crate) fn create_peer_connection(connection_type: ConnectionType) -> Result<RtcPeerConnection, JsValue> {
+/// Specifies what kind of peer connection to create
+#[derive(Debug, Clone, Copy)]
+pub enum ConnectionType {
+    /// Within local network
+    Local,
+    /// Setup with STUN server, WAN capabilities but can fail
+    Stun,
+    /// Setup with STUN and TURN servers, will fallback to TURN if needed, most stable connection
+    StunAndTurn,
+}
+
+pub(crate) fn create_peer_connection(
+    connection_type: ConnectionType,
+) -> Result<RtcPeerConnection, JsValue> {
     match connection_type {
         ConnectionType::Local => RtcPeerConnection::new(),
         ConnectionType::Stun => {
@@ -33,12 +45,12 @@ pub(crate) fn create_peer_connection(connection_type: ConnectionType) -> Result<
 
             RtcPeerConnection::new_with_configuration(&rtc_configuration)
         }
-        ConnectionType::StunAndTurn => unimplemented!()
+        ConnectionType::StunAndTurn => unimplemented!(),
     }
 }
 
 pub(crate) async fn create_sdp_offer(
-    peer_connection: RtcPeerConnection,
+    peer_connection: &RtcPeerConnection,
 ) -> Result<String, JsValue> {
     let offer = JsFuture::from(peer_connection.create_offer())
         .await
@@ -66,7 +78,7 @@ pub(crate) async fn create_sdp_offer(
 }
 
 pub(crate) async fn create_sdp_answer(
-    peer_connection: RtcPeerConnection,
+    peer_connection: &RtcPeerConnection,
     offer: String,
 ) -> Result<String, JsValue> {
     let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
@@ -95,8 +107,8 @@ mod test {
 
     #[wasm_bindgen_test]
     fn test_create_stun_peer_connection_is_successful() {
-        let peer_connection =
-            create_peer_connection(ConnectionType::Local).expect("creating peer connection failed!");
+        let peer_connection = create_peer_connection(ConnectionType::Local)
+            .expect("creating peer connection failed!");
         assert_eq!(
             peer_connection.ice_connection_state(),
             RtcIceConnectionState::New
@@ -110,17 +122,15 @@ mod test {
     #[wasm_bindgen_test]
     async fn test_create_sdp_offer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
-        let _offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
+        let _offer = create_sdp_offer(&peer_connection).await.unwrap();
         assert!(peer_connection.local_description().is_some());
     }
 
     #[wasm_bindgen_test]
     async fn test_create_sdp_answer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
-        let offer = create_sdp_offer(peer_connection.clone()).await.unwrap();
-        let _answer = create_sdp_answer(peer_connection.clone(), offer)
-            .await
-            .unwrap();
+        let offer = create_sdp_offer(&peer_connection).await.unwrap();
+        let _answer = create_sdp_answer(&peer_connection, offer).await.unwrap();
         assert!(peer_connection.local_description().is_some());
         assert!(peer_connection.remote_description().is_some());
     }

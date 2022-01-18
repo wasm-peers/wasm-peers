@@ -16,10 +16,11 @@ After that you can send messages back and forth without worrying about the imple
 This example shows two peers sending `ping` and `pong` messages to each other.
 
 ```
-use rusty_games_library::{ConnectionType, NetworkManager};
+use rusty_games_library::ConnectionType;
+use rusty_games_library::one_to_one::NetworkManager;
 use web_sys::console;
 
-let session_id = "some-session-id".to_string();
+let session_id = SessionId::new("some-session-id".to_string());
 let mut server = NetworkManager::new(
     WS_IP_ADDRESS,
     session_id.clone(),
@@ -59,12 +60,12 @@ client.start(client_on_open, client_on_message).unwrap();
 */
 
 #[deny(missing_docs)]
-mod one_to_one;
+pub mod one_to_many;
+pub mod one_to_one;
 mod utils;
-mod one_to_many;
 
-pub use crate::one_to_one::{ConnectionType, NetworkManager};
 pub use rusty_games_protocol::SessionId;
+pub use utils::ConnectionType;
 
 /// Returns a new SessionId instance that can be used to identify a session by signaling server.
 pub fn get_random_session_id() -> SessionId {
