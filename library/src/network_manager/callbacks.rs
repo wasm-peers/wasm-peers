@@ -40,10 +40,7 @@ pub(crate) fn set_peer_connection_on_data_channel(
 }
 
 /// handle message sent by signaling server
-pub(crate) fn set_websocket_on_message(
-    websocket: &WebSocket,
-    peer_connection: RtcPeerConnection,
-) {
+pub(crate) fn set_websocket_on_message(websocket: &WebSocket, peer_connection: RtcPeerConnection) {
     {
         let websocket_clone = websocket.clone();
         let peer_connection_clone = peer_connection;

@@ -24,7 +24,6 @@ let mut server = NetworkManager::new(
     WS_IP_ADDRESS,
     session_id.clone(),
     ConnectionType::Stun,
-    true,
 )
 .unwrap();
 
@@ -43,7 +42,6 @@ let mut client = NetworkManager::new(
     WS_IP_ADDRESS,
     session_id,
     ConnectionType::Stun,
-    false,
 )
 .unwrap();
 let client_on_open = || { /* do nothing */ };
@@ -61,7 +59,6 @@ client.start(client_on_open, client_on_message).unwrap();
 */
 
 #[deny(missing_docs)]
-
 mod network_manager;
 
 pub use crate::network_manager::{ConnectionType, NetworkManager};

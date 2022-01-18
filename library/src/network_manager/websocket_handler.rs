@@ -34,10 +34,7 @@ pub(crate) async fn handle_websocket_message(
             let answer = create_sdp_answer(peer_connection.clone(), offer)
                 .await
                 .expect("failed to create SDP answer");
-            debug!(
-                "received an offer and created an answer: {}",
-                answer
-            );
+            debug!("received an offer and created an answer: {}", answer);
             let signal_message = SignalMessage::SdpAnswer(answer, session_id);
             let signal_message = serde_json_wasm::to_string(&signal_message)
                 .expect("failed to serialize SignalMessage");
@@ -57,10 +54,7 @@ pub(crate) async fn handle_websocket_message(
             );
         }
         SignalMessage::IceCandidate(ice_candidate, _session_id) => {
-            debug!(
-                "peer received ice candidate: {}",
-                &ice_candidate
-            );
+            debug!("peer received ice candidate: {}", &ice_candidate);
             let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)
                 .expect("failed to deserialize IceCandidate");
 
@@ -76,10 +70,7 @@ pub(crate) async fn handle_websocket_message(
             )
             .await
             .expect("failed to add ICE candidate");
-            debug!(
-                "added ice candidate {:?}",
-                ice_candidate
-            );
+            debug!("added ice candidate {:?}", ice_candidate);
         }
         SignalMessage::Error(error, session_id) => {
             error!(
@@ -95,9 +86,9 @@ pub(crate) async fn handle_websocket_message(
 #[cfg(test)]
 mod test {
     use super::*;
+    use mockall::mock;
     use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
     use web_sys::{RtcIceConnectionState, RtcIceGatheringState};
-    use mockall::mock;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -114,11 +105,14 @@ mod test {
         //  I could introduce a trait, implement it for web_sys::WebSocket and MockWebSocket as well,
         //  but that's a lot of work...
         //  This is a integration test for now.
-        let websocket = WebSocket::new("ws://0.0.0.0:9001/ws").expect("local signaling server instance was not found");
+        let websocket = WebSocket::new("ws://0.0.0.0:9001/ws")
+            .expect("local signaling server instance was not found");
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         // FIXME: this fails because peer_connection state gets modified in other tests
-        handle_websocket_message(message, peer_connection.clone(), websocket).await.unwrap();
+        handle_websocket_message(message, peer_connection.clone(), websocket)
+            .await
+            .unwrap();
         assert!(peer_connection.local_description().is_some());
     }
 }

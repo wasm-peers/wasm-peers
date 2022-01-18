@@ -100,26 +100,23 @@ impl NetworkManager {
             ..
         } = self.inner.borrow().clone();
 
-        // if is_host {
-            let data_channel = peer_connection.create_data_channel(&session_id);
-            debug!(
-                "data_channel created with label: {:?}",
-                data_channel.label()
-            );
+        let data_channel = peer_connection.create_data_channel(&session_id);
+        debug!(
+            "data_channel created with label: {:?}",
+            data_channel.label()
+        );
 
-            set_data_channel_on_open(&data_channel, on_open_callback.clone());
-            set_data_channel_on_error(&data_channel);
-            set_data_channel_on_message(&data_channel, on_message_callback.clone());
+        set_data_channel_on_open(&data_channel, on_open_callback.clone());
+        set_data_channel_on_error(&data_channel);
+        set_data_channel_on_message(&data_channel, on_message_callback.clone());
 
-            self.inner.borrow_mut().data_channel = Some(data_channel);
-        // } else {
-            set_peer_connection_on_data_channel(
-                &peer_connection,
-                self.clone(),
-                on_open_callback,
-                on_message_callback,
-            );
-        // }
+        self.inner.borrow_mut().data_channel = Some(data_channel);
+        set_peer_connection_on_data_channel(
+            &peer_connection,
+            self.clone(),
+            on_open_callback,
+            on_message_callback,
+        );
 
         set_peer_connection_on_ice_candidate(
             &peer_connection,
