@@ -24,8 +24,8 @@ pub type Sessions = Arc<RwLock<HashMap<SessionId, Session>>>;
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
 
 pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: Sessions) {
-    let id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
-    info!("new user connected: {}", id);
+    let user_id = UserId::new(NEXT_USER_ID.fetch_add(1, Ordering::Relaxed));
+    info!("new user connected: {:?}", user_id);
 
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
@@ -41,22 +41,22 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
         }
     });
 
-    connections.write().await.insert(id, tx);
+    connections.write().await.insert(user_id, tx);
 
     while let Some(result) = user_ws_rx.next().await {
         let msg = match result {
             Ok(msg) => msg,
             Err(e) => {
-                eprintln!("websocket error (id={}): {}", id, e);
+                eprintln!("websocket error (id={:?}): {}", user_id, e);
                 break;
             }
         };
 
-        user_message(id, msg, &connections, &sessions).await;
+        user_message(user_id, msg, &connections, &sessions).await;
     }
 
-    eprintln!("user disconnected: {}", id);
-    user_disconnected(id, &connections, &sessions).await;
+    eprintln!("user disconnected: {:?}", user_id);
+    user_disconnected(user_id, &connections, &sessions).await;
 }
 
 async fn user_message(
@@ -68,7 +68,7 @@ async fn user_message(
     if let Ok(msg) = msg.to_str() {
         match serde_json::from_str::<SignalMessage>(msg) {
             Ok(request) => {
-                info!("message received from user {}: {:?}", user_id, request);
+                info!("message received from user {:?}: {:?}", user_id, request);
                 match request {
                     SignalMessage::SessionJoin(session_id) => {
                         match sessions.write().await.entry(session_id.clone()) {
@@ -103,11 +103,11 @@ async fn user_message(
                         }
                     }
                     // pass offer to the other user in session without changing anything
-                    SignalMessage::SdpOffer(offer, session_id) => {
+                    SignalMessage::SdpOffer(session_id, offer) => {
                         match sessions.write().await.get_mut(&session_id) {
                             Some(session) => {
                                 if session.offer_received {
-                                    warn!("offer already sent by the the peer, ignoring the second offer: {}", session_id);
+                                    warn!("offer already sent by the the peer, ignoring the second offer: {:?}", session_id);
                                 } else {
                                     session.offer_received = true;
                                 }
@@ -119,7 +119,7 @@ async fn user_message(
                                 };
                                 match recipient {
                                     Some(recipient_id) => {
-                                        let response = SignalMessage::SdpOffer(offer, session_id);
+                                        let response = SignalMessage::SdpOffer(session_id, offer);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
                                         let recipient_tx =
@@ -128,17 +128,17 @@ async fn user_message(
                                         recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
-                                        error!("Missing second user in session: {}", &session_id);
+                                        error!("Missing second user in session: {:?}", &session_id);
                                     }
                                 }
                             }
                             None => {
-                                error!("No such session: {}", &session_id);
+                                error!("No such session: {:?}", &session_id);
                             }
                         }
                     }
                     // pass answer to the other user in session without changing anything
-                    SignalMessage::SdpAnswer(answer, session_id) => {
+                    SignalMessage::SdpAnswer(session_id, answer) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
                                 let recipient = if Some(user_id) == session.first {
@@ -148,7 +148,7 @@ async fn user_message(
                                 };
                                 match recipient {
                                     Some(recipient_id) => {
-                                        let response = SignalMessage::SdpAnswer(answer, session_id);
+                                        let response = SignalMessage::SdpAnswer(session_id, answer);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
                                         let recipient_tx =
@@ -157,16 +157,16 @@ async fn user_message(
                                         recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
-                                        error!("Missing second user in session: {}", &session_id);
+                                        error!("Missing second user in session: {:?}", &session_id);
                                     }
                                 }
                             }
                             None => {
-                                error!("No such session: {}", &session_id);
+                                error!("No such session: {:?}", &session_id);
                             }
                         }
                     }
-                    SignalMessage::IceCandidate(candidate, session_id) => {
+                    SignalMessage::IceCandidate(session_id, candidate) => {
                         match sessions.read().await.get(&session_id) {
                             Some(session) => {
                                 let recipient = if Some(user_id) == session.first {
@@ -177,7 +177,7 @@ async fn user_message(
                                 match recipient {
                                     Some(recipient_id) => {
                                         let response =
-                                            SignalMessage::IceCandidate(candidate, session_id);
+                                            SignalMessage::IceCandidate(session_id, candidate);
                                         let response = serde_json::to_string(&response).unwrap();
                                         let connections_reader = connections.read().await;
                                         let recipient_tx =
@@ -186,12 +186,12 @@ async fn user_message(
                                         recipient_tx.send(Message::text(response)).unwrap();
                                     }
                                     None => {
-                                        error!("Missing second user in session: {}", &session_id);
+                                        error!("Missing second user in session: {:?}", &session_id);
                                     }
                                 }
                             }
                             None => {
-                                error!("No such session: {}", &session_id);
+                                error!("No such session: {:?}", &session_id);
                             }
                         }
                     }
@@ -205,7 +205,7 @@ async fn user_message(
     }
 }
 
-async fn user_disconnected(user_id: usize, connections: &Connections, sessions: &Sessions) {
+async fn user_disconnected(user_id: UserId, connections: &Connections, sessions: &Sessions) {
     let mut session_to_delete = None;
     for (session_id, session) in sessions.write().await.iter_mut() {
         if session.first == Some(user_id) {

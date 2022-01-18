@@ -13,11 +13,11 @@ pub(crate) enum DocumentMsg {
 
 #[derive(Serialize, Deserialize)]
 pub struct DocumentQuery {
-    pub session_id: SessionId,
+    pub session_id: String,
 }
 
 impl DocumentQuery {
-    pub(crate) fn new(session_id: SessionId) -> Self {
+    pub(crate) fn new(session_id: String) -> Self {
         DocumentQuery { session_id }
     }
 }
@@ -38,7 +38,7 @@ impl Component for Document {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        let session_id = get_queries().get("session_id").unwrap();
+        let session_id = SessionId::new(get_queries().get("session_id").unwrap());
         let mut network_manager = NetworkManager::new(
             env!("WS_IP_PORT"),
             session_id.clone(),
@@ -117,7 +117,7 @@ impl Component for Document {
         };
         html! {
             <main>
-                <p> { "Session id: " } { &self.session_id } </p>
+                <p> { "Session id: " } { &self.session_id.inner } </p>
                 <textarea id={ "document-textarea" } { disabled } { placeholder } { oninput }/>
             </main>
         }

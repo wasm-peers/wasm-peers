@@ -11,7 +11,7 @@ pub mod one_to_many;
 
 /// Unique identifier of signaling session that each user provides
 /// when communicating with the signaling server
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct SessionId {
     pub inner: String
 }
