@@ -59,12 +59,14 @@ client.start(client_on_open, client_on_message).unwrap();
 */
 
 #[deny(missing_docs)]
-mod network_manager;
+mod one_to_one;
+mod utils;
+mod one_to_many;
 
-pub use crate::network_manager::{ConnectionType, NetworkManager};
+pub use crate::one_to_one::{ConnectionType, NetworkManager};
 pub use rusty_games_protocol::SessionId;
 
 /// Returns a new SessionId instance that can be used to identify a session by signaling server.
 pub fn get_random_session_id() -> SessionId {
-    uuid::Uuid::new_v4().to_string()
+    SessionId::new(uuid::Uuid::new_v4().to_string())
 }

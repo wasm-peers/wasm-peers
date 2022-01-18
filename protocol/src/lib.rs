@@ -2,35 +2,37 @@
 
 */
 
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
+
+pub mod one_to_one;
+pub mod one_to_many;
 
 /// Unique identifier of signaling session that each user provides
 /// when communicating with the signaling server
-pub type SessionId = String;
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SessionId {
+    pub inner: String
+}
+
+impl SessionId {
+    pub fn new(inner: String) -> Self {
+        SessionId { inner }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
+pub struct UserId {
+    pub inner: usize
+}
+
+impl UserId {
+    pub fn new(inner: usize) -> Self {
+        UserId { inner }
+    }
+}
 
 /// Unique identifier specifying which peer is host and will be creating an offer,
 /// and which will await it.
 pub type IsHost = bool;
-
-/// Enum used by all Client, Mini-server and Signaling server to communicate with each other
-/// Two main categories are messages used to setup signaling session
-/// and messages used to setup WebRTC connection afterwards
-#[derive(Debug, Serialize, Deserialize)]
-pub enum SignalMessage {
-    /// Either client or server connecting to signaling session
-    SessionStartOrJoin(SessionId),
-    /// Report back to the users that both of them are in session
-    SessionReady(SessionId, IsHost),
-
-    /// SDP Offer that gets passed to the other user without modifications
-    SdpOffer(String, SessionId),
-    /// SDP Answer that gets passed to the other user without modifications
-    SdpAnswer(String, SessionId),
-    /// Proposed ICE Candidate of one user passed to the other user without modifications
-    IceCandidate(String, SessionId),
-
-    /// Generic error containing detailed information about the cause
-    Error(String, SessionId),
-}

@@ -9,14 +9,12 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 
-use rusty_games_protocol::{SessionId, SignalMessage};
+use rusty_games_protocol::{SessionId, SignalMessage, UserId};
 
-type UserId = usize;
-
+#[derive(Default, Debug)]
 pub struct Session {
-    pub first: Option<UserId>,
-    pub second: Option<UserId>,
-    pub offer_received: bool,
+    pub host: Option<UserId>,
+    pub users: Vec<UserId>,
 }
 
 pub type Connections = Arc<RwLock<HashMap<UserId, mpsc::UnboundedSender<Message>>>>;
@@ -71,35 +69,35 @@ async fn user_message(
             Ok(request) => {
                 info!("message received from user {}: {:?}", user_id, request);
                 match request {
-                    SignalMessage::SessionStartOrJoin(session_id) => {
-                        match sessions.write().await.entry(session_id.clone()) {
-                            // on first user in session - create session object and store connecting user id
-                            Entry::Vacant(entry) => {
-                                entry.insert(Session {
-                                    first: Some(user_id),
-                                    second: None,
-                                    offer_received: false,
-                                });
-                            }
-                            // on second user - add him to existing session and notify users that session is ready
-                            Entry::Occupied(mut entry) => {
-                                entry.get_mut().second = Some(user_id);
-                                let first_response =
-                                    SignalMessage::SessionReady(session_id.clone(), true);
-                                let first_response =
-                                    serde_json::to_string(&first_response).unwrap();
-                                let second_response =
-                                    SignalMessage::SessionReady(session_id, false);
-                                let second_response =
-                                    serde_json::to_string(&second_response).unwrap();
+                    SignalMessage::SessionJoin(session_id, is_host) => {
+                        let session = sessions.write().await.entry(session_id.clone()).or_insert(Session::default());
+                        let connections_reader = connections.read().await;
 
-                                let connections_reader = connections.read().await;
-                                if let Some(first_id) = &entry.get().first {
-                                    let first_tx = connections_reader.get(first_id).unwrap();
-                                    first_tx.send(Message::text(first_response)).unwrap();
-                                    let second_tx = connections_reader.get(&user_id).unwrap();
-                                    second_tx.send(Message::text(&second_response)).unwrap();
-                                }
+                        if is_host && session.host.is_none() {
+                            session.host = Some(user_id);
+                            for client_id in &session.users {
+                                // start connections with all already present users
+                                let host_tx = connections_reader.get(&user_id).export("host not in connections");
+                                let host_response =
+                                    SignalMessage::SessionReady(session_id.clone(), client_id.clone());
+                                let host_response =
+                                    serde_json::to_string(&host_response).unwrap();
+                                host_tx.send(Message::text(&host_response)).expect("failed to send SessionReady message to host");
+                            }
+                        } else if is_host && session.host.is_some() {
+                            error!("connecting user wants to be a host, but host is already present!");
+                            return;
+                        } else {
+                            // connect new user with host
+                            session.users.push(user_id);
+
+                            if let Some(host_id) = session.host {
+                                let host_tx = connections_reader.get(&host_id).export("host not in connections");
+                                let host_response =
+                                    SignalMessage::SessionReady(session_id.clone(), user_id.clone());
+                                let host_response =
+                                    serde_json::to_string(&host_response).unwrap();
+                                host_tx.send(Message::text(&host_response)).expect("failed to send SessionReady message to host");
                             }
                         }
                     }

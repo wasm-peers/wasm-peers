@@ -1,0 +1,130 @@
+use crate::utils::{create_sdp_answer, create_sdp_offer, create_peer_connection, IceCandidate};
+use ::log::{debug, error, info};
+use wasm_bindgen::JsValue;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{
+    RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit,
+    WebSocket,
+};
+use rusty_games_protocol::one_to_many::SignalMessage;
+use crate::one_to_many::{Connection, NetworkManager};
+
+/// basically a state automata spread across host, client and signaling server
+/// handling each step in session and then WebRTC setup
+pub(crate) async fn handle_websocket_message(
+    network_manager: NetworkManager,
+    message: SignalMessage,
+    websocket: WebSocket,
+    _on_open_callback: impl FnMut(usize) + Clone + 'static,
+    _on_message_callback: impl FnMut(usize, String) + Clone + 'static,
+    is_host: bool,
+) -> Result<(), JsValue> {
+    match message {
+        SignalMessage::SessionJoin(_session_id, _user_id) => {
+            error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
+        }
+        SignalMessage::SessionReady(session_id, user_id) => {
+            info!("peer received info that session is ready {:?}", session_id);
+            let peer_connection = create_peer_connection(network_manager.inner.borrow().connection_type).unwrap();
+            // TODO: set peer_connection callbacks
+            let data_channel = peer_connection.create_data_channel(&format!("{}-{}", session_id.inner, user_id.inner));
+            // TODO: set data_channel callbacks
+            network_manager.inner.borrow_mut().connections.insert(user_id, Connection::new(peer_connection.clone(), data_channel.clone()));
+
+            let offer = create_sdp_offer(peer_connection).await?;
+            let signal_message = SignalMessage::SdpOffer(session_id, user_id, offer);
+            let signal_message = serde_json_wasm::to_string(&signal_message)
+                .expect("failed to serialize SignalMessage");
+            websocket.send_with_str(&signal_message)?;
+            debug!("(is_host: {is_host}) sent an offer successfully");
+        }
+        SignalMessage::SdpOffer(session_id, user_id, offer) => {
+            let peer_connection = network_manager.inner.borrow().connections.get(&user_id).expect("no connection for given user_id").peer_connection.clone();
+            let answer = create_sdp_answer(peer_connection, offer)
+                .await
+                .expect("failed to create SDP answer");
+            debug!("received an offer and created an answer: {}", answer);
+            let signal_message = SignalMessage::SdpAnswer(session_id, user_id, answer);
+            let signal_message = serde_json_wasm::to_string(&signal_message)
+                .expect("failed to serialize SignalMessage");
+            websocket
+                .send_with_str(&signal_message)
+                .expect("failed to send SPD answer to signaling server");
+        }
+        SignalMessage::SdpAnswer(session_id, user_id, answer) => {
+            let peer_connection = network_manager.inner.borrow().connections.get(&user_id).expect("no connection for given user_id").peer_connection.clone();
+            let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+            remote_session_description.sdp(&answer);
+            JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
+                .await
+                .expect("failed to set remote descripiton");
+            debug!(
+                "received answer from peer and set remote description: {}, {:?}",
+                answer, session_id
+            );
+        }
+        SignalMessage::IceCandidate(_session_id, user_id, ice_candidate) => {
+            let peer_connection = network_manager.inner.borrow().connections.get(&user_id).expect("no connection for given user_id").peer_connection.clone();
+            debug!("peer received ice candidate: {}", &ice_candidate);
+            // TODO: IceCandidate should already be struct inside signal message
+            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)
+                .expect("failed to deserialize IceCandidate");
+
+            let mut rtc_candidate = RtcIceCandidateInit::new("");
+            rtc_candidate.candidate(&ice_candidate.candidate);
+            rtc_candidate.sdp_m_line_index(ice_candidate.sdp_m_line_index);
+            rtc_candidate.sdp_mid(ice_candidate.sdp_mid.as_deref());
+
+            let rtc_candidate =
+                RtcIceCandidate::new(&rtc_candidate).expect("failed to create new RtcIceCandidate");
+            JsFuture::from(
+                peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
+            )
+            .await
+            .expect("failed to add ICE candidate");
+            debug!("added ice candidate {:?}", ice_candidate);
+        }
+        SignalMessage::Error(session_id, error) => {
+            error!(
+                "signaling server returned error: session id: {:?}, error: {error}", session_id
+            );
+        }
+    }
+
+    Ok(())
+}
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     use mockall::mock;
+//     use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
+//     use web_sys::{RtcIceConnectionState, RtcIceGatheringState};
+//     use rusty_games_protocol::SessionId;
+//
+//     wasm_bindgen_test_configure!(run_in_browser);
+//
+//     mock! {
+//         WebSocket {}
+//     }
+//
+//     // #[wasm_bindgen_test]
+//     async fn test_handle_session_ready_signal_is_successful() {
+//         let message = SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
+//         let peer_connection = RtcPeerConnection::new().unwrap();
+//
+//         // TODO: this should be mocked, but how do you pass a mock to a function expecting different type?
+//         //  I could introduce a trait, implement it for web_sys::WebSocket and MockWebSocket as well,
+//         //  but that's a lot of work...
+//         //  This is a integration test for now.
+//         let websocket = WebSocket::new("ws://0.0.0.0:9001/ws")
+//             .expect("local signaling server instance was not found");
+//         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
+//
+//         // FIXME: this fails because peer_connection state gets modified in other tests
+//         handle_websocket_message(message, peer_connection.clone(), websocket)
+//             .await
+//             .unwrap();
+//         assert!(peer_connection.local_description().is_some());
+//     }
+// }

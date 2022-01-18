@@ -8,20 +8,20 @@ use web_sys::{RtcDataChannel, WebSocket};
 
 use rusty_games_protocol::SessionId;
 
-use crate::network_manager::callbacks::{
+use crate::one_to_one::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
     set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
     set_peer_connection_on_ice_connection_state_change,
     set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
     set_websocket_on_message, set_websocket_on_open,
 };
-use crate::network_manager::utils::create_stun_peer_connection;
+use crate::utils::create_peer_connection;
 
 mod callbacks;
-pub mod utils;
 mod websocket_handler;
 
 /// Specifies what kind of peer connection to create
+#[derive(Debug, Clone, Copy)]
 pub enum ConnectionType {
     /// Within local network
     Local,
@@ -33,7 +33,7 @@ pub enum ConnectionType {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkManagerInner {
-    session_id: String,
+    session_id: SessionId,
     websocket: WebSocket,
     peer_connection: RtcPeerConnection,
     pub(crate) data_channel: Option<RtcDataChannel>,
@@ -66,11 +66,7 @@ impl NetworkManager {
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
-        let peer_connection = match connection_type {
-            ConnectionType::Local => RtcPeerConnection::new()?,
-            ConnectionType::Stun => create_stun_peer_connection()?,
-            ConnectionType::StunAndTurn => unimplemented!("no turn server yet!"),
-        };
+        let peer_connection = create_peer_connection(connection_type)?;
 
         let websocket = WebSocket::new(ws_ip_address)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -100,7 +96,7 @@ impl NetworkManager {
             ..
         } = self.inner.borrow().clone();
 
-        let data_channel = peer_connection.create_data_channel(&session_id);
+        let data_channel = peer_connection.create_data_channel(&session_id.inner);
         debug!(
             "data_channel created with label: {:?}",
             data_channel.label()

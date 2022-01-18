@@ -8,11 +8,11 @@ use web_sys::{
     RtcPeerConnectionIceEvent, WebSocket,
 };
 
-use rusty_games_protocol::{SessionId, SignalMessage};
+use rusty_games_protocol::{SessionId, UserId};
+use rusty_games_protocol::one_to_many::SignalMessage;
 
-use crate::network_manager::utils::IceCandidate;
-use crate::network_manager::websocket_handler;
-use crate::NetworkManager;
+use crate::utils::IceCandidate;
+use crate::one_to_many::{NetworkManager, websocket_handler};
 
 /// also calls:
 /// * set_data_channel_on_open
@@ -20,41 +20,55 @@ use crate::NetworkManager;
 /// * set_data_channel_on_error
 pub(crate) fn set_peer_connection_on_data_channel(
     peer_connection: &RtcPeerConnection,
-    network_manager: NetworkManager,
-    on_open_callback: impl FnMut() + Clone + 'static,
-    on_message_callback: impl FnMut(String) + Clone + 'static,
+    client_id: UserId,
+    _network_manager: NetworkManager,
+    on_open_callback: impl FnMut(UserId) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
 ) {
-    // peer_connection on data channel
+    let on_open_callback_clone = on_open_callback;
+    let on_message_callback_clone = on_message_callback;
     let on_datachannel = Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
         info!("received data channel");
         let data_channel = data_channel_event.channel();
 
-        set_data_channel_on_open(&data_channel, on_open_callback.clone());
+        set_data_channel_on_open(&data_channel, client_id, on_open_callback_clone.clone());
         set_data_channel_on_error(&data_channel);
-        set_data_channel_on_message(&data_channel, on_message_callback.clone());
+        set_data_channel_on_message(&data_channel, client_id, on_message_callback_clone.clone());
 
-        network_manager.inner.borrow_mut().data_channel = Some(data_channel);
+        // network_manager.inner.borrow_mut().connections.data_channel = Some(data_channel);
+        // TODO: this is for client and not host, should there be different struct for that?
     }) as Box<dyn FnMut(RtcDataChannelEvent)>);
     peer_connection.set_ondatachannel(Some(on_datachannel.as_ref().unchecked_ref()));
     on_datachannel.forget();
 }
 
 /// handle message sent by signaling server
-pub(crate) fn set_websocket_on_message(websocket: &WebSocket, peer_connection: RtcPeerConnection) {
-    {
-        let websocket_clone = websocket.clone();
-        let peer_connection_clone = peer_connection;
-        let onmessage_callback = Closure::wrap(Box::new(move |ev: MessageEvent| {
+pub(crate) fn set_websocket_on_message(
+    websocket: &WebSocket,
+    network_manager: NetworkManager,
+    on_open_callback: impl FnMut(usize) + Clone + 'static,
+    on_message_callback: impl FnMut(usize, String) + Clone + 'static,
+    is_host: bool,
+) {
+    let websocket_clone = websocket.clone();
+    let _on_open_callback_clone = on_open_callback.clone();
+    let _on_message_callback_clone = on_message_callback.clone();
+    let onmessage_callback = Closure::wrap(Box::new(move |ev: MessageEvent| {
             if let Ok(message) = ev.data().dyn_into::<JsString>() {
                 match serde_json_wasm::from_str(&String::from(message)) {
                     Ok(message) => {
-                        let websocket_clone = websocket_clone.clone();
-                        let peer_connection_clone = peer_connection_clone.clone();
+                        let network_manager = network_manager.clone();
+                        let websocket = websocket_clone.clone();
+                        let on_open_callback_clone = on_open_callback.clone();
+                        let on_message_callback_clone = on_message_callback.clone();
                         wasm_bindgen_futures::spawn_local(async move {
                             websocket_handler::handle_websocket_message(
+                                network_manager,
                                 message,
-                                peer_connection_clone,
-                                websocket_clone,
+                                websocket,
+                                on_open_callback_clone,
+                                on_message_callback_clone,
+                                is_host
                             )
                             .await
                             .unwrap_or_else(|error| {
@@ -71,14 +85,13 @@ pub(crate) fn set_websocket_on_message(websocket: &WebSocket, peer_connection: R
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
         onmessage_callback.forget();
     }
-}
 
 /// once websocket is open, send a request to start or join a session
-pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId) {
+pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_host: bool) {
     {
         let websocket_clone = websocket.clone();
         let onopen_callback = Closure::wrap(Box::new(move |_| {
-            let signal_message = SignalMessage::SessionStartOrJoin(session_id.clone());
+            let signal_message = SignalMessage::SessionJoin(session_id.clone(), is_host);
             let signal_message = serde_json_wasm::to_string(&signal_message)
                 .expect("failed serializing SignalMessage");
             websocket_clone
@@ -116,7 +129,8 @@ pub(crate) fn set_peer_connection_on_ice_gathering_state_change(
 
 pub(crate) fn set_data_channel_on_message(
     data_channel: &RtcDataChannel,
-    mut on_message_callback: impl FnMut(String) + 'static,
+    client_id: UserId,
+    mut on_message_callback: impl FnMut(UserId, String) + 'static,
 ) {
     let datachannel_on_message = Closure::wrap(Box::new(move |ev: MessageEvent| {
         if let Some(message) = ev.data().as_string() {
@@ -124,7 +138,7 @@ pub(crate) fn set_data_channel_on_message(
                 "message from datachannel (will call on_message): {:?}",
                 message
             );
-            on_message_callback(message);
+            on_message_callback(client_id, message);
         }
     }) as Box<dyn FnMut(MessageEvent)>);
     data_channel.set_onmessage(Some(datachannel_on_message.as_ref().unchecked_ref()));
@@ -141,11 +155,12 @@ pub(crate) fn set_data_channel_on_error(data_channel: &RtcDataChannel) {
 
 pub(crate) fn set_data_channel_on_open(
     data_channel: &RtcDataChannel,
-    mut on_open_callback: impl FnMut() + 'static,
+    client_id: UserId,
+    mut on_open_callback: impl FnMut(UserId) + 'static,
 ) {
     let onopen_callback = Closure::wrap(Box::new(move |_| {
         debug!("data channel is now open, calling on_open!");
-        on_open_callback();
+        on_open_callback(client_id);
     }) as Box<dyn FnMut(JsValue)>);
     data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
     onopen_callback.forget();
@@ -169,6 +184,7 @@ pub(crate) fn set_peer_connection_on_ice_connection_state_change(
 
 pub(crate) fn set_peer_connection_on_ice_candidate(
     peer_connection: &RtcPeerConnection,
+    client_id: UserId,
     websocket_clone: WebSocket,
     session_id_clone: SessionId,
 ) {
@@ -184,7 +200,7 @@ pub(crate) fn set_peer_connection_on_ice_candidate(
                 .expect("failed to serialize IceCandidate");
 
             let signal_message =
-                SignalMessage::IceCandidate(signaled_candidate, session_id_clone.clone());
+                SignalMessage::IceCandidate(session_id_clone.clone(), client_id, signaled_candidate);
             let signal_message = serde_json_wasm::to_string(&signal_message)
                 .expect("failed to serialize SignalMessage");
 

@@ -6,6 +6,7 @@ use rusty_games_library::{ConnectionType, NetworkManager};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use rusty_games_protocol::SessionId;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use web_sys::console;
 
@@ -17,7 +18,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn network_manager_starts_successfully() {
     let mut server = NetworkManager::new(
         WS_IP_ADDRESS,
-        "dummy-session-id".to_string(),
+        SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
     )
     .unwrap();
@@ -31,7 +32,7 @@ fn single_message_passes_both_ways() {
 
     let mut server = NetworkManager::new(
         WS_IP_ADDRESS,
-        "TODO-session-id".to_string(),
+        SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
     )
     .unwrap();
@@ -49,7 +50,7 @@ fn single_message_passes_both_ways() {
 
     let mut client = NetworkManager::new(
         WS_IP_ADDRESS,
-        "TODO-session-id".to_string(),
+        SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
     )
     .unwrap();

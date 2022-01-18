@@ -28,10 +28,6 @@ version = "0.3.22"
 features = [
     "console",
 
-    # random SessionID generation
-    "Window",
-    "Crypto",
-
     # WebRTC features
     "MessageEvent",
     "RtcPeerConnection",

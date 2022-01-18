@@ -4,6 +4,7 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
+use crate::ConnectionType;
 
 const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 
@@ -14,20 +15,26 @@ pub(crate) struct IceCandidate {
     pub sdp_m_line_index: Option<u16>,
 }
 
-pub(crate) fn create_stun_peer_connection() -> Result<RtcPeerConnection, JsValue> {
-    let ice_servers = Array::new();
-    {
-        let server_entry = Object::new();
+pub(crate) fn create_peer_connection(connection_type: ConnectionType) -> Result<RtcPeerConnection, JsValue> {
+    match connection_type {
+        ConnectionType::Local => RtcPeerConnection::new(),
+        ConnectionType::Stun => {
+            let ice_servers = Array::new();
+            {
+                let server_entry = Object::new();
 
-        Reflect::set(&server_entry, &"urls".into(), &STUN_SERVER.into())?;
+                Reflect::set(&server_entry, &"urls".into(), &STUN_SERVER.into())?;
 
-        ice_servers.push(&*server_entry);
+                ice_servers.push(&*server_entry);
+            }
+
+            let mut rtc_configuration = RtcConfiguration::new();
+            rtc_configuration.ice_servers(&ice_servers);
+
+            RtcPeerConnection::new_with_configuration(&rtc_configuration)
+        }
+        ConnectionType::StunAndTurn => unimplemented!()
     }
-
-    let mut rtc_configuration = RtcConfiguration::new();
-    rtc_configuration.ice_servers(&ice_servers);
-
-    RtcPeerConnection::new_with_configuration(&rtc_configuration)
 }
 
 pub(crate) async fn create_sdp_offer(
@@ -89,7 +96,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_create_stun_peer_connection_is_successful() {
         let peer_connection =
-            create_stun_peer_connection().expect("creating peer connection failed!");
+            create_peer_connection(ConnectionType::Local).expect("creating peer connection failed!");
         assert_eq!(
             peer_connection.ice_connection_state(),
             RtcIceConnectionState::New
