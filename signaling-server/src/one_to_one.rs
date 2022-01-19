@@ -9,8 +9,8 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 
-use rusty_games_protocol::{SessionId, UserId};
 use rusty_games_protocol::one_to_one::SignalMessage;
+use rusty_games_protocol::{SessionId, UserId};
 
 pub struct Session {
     pub first: Option<UserId>,

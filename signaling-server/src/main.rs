@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use warp::Filter;
 
-use rusty_games_signaling_server::one_to_one::{user_connected, Connections, Sessions};
+use rusty_games_signaling_server::one_to_many::{user_connected, Connections, Sessions};
 
 #[tokio::main]
 async fn main() {
