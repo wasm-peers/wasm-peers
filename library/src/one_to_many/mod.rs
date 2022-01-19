@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
 use crate::ConnectionType;
-use log::debug;
 use rusty_games_protocol::{SessionId, UserId};
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
@@ -37,12 +36,12 @@ struct NetworkManagerInner {
 }
 
 #[derive(Debug, Clone)]
-pub struct NetworkManager {
+pub(crate) struct NetworkManager {
     inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
-    pub fn new(
+    fn new(
         ws_ip_address: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
@@ -62,7 +61,7 @@ impl NetworkManager {
         })
     }
 
-    pub fn start(
+    fn start(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
@@ -83,11 +82,19 @@ impl NetworkManager {
         Ok(())
     }
 
-    /// Send message to the other end of the connection.
-    /// It might fail if the connection is not yet set up
-    /// and thus should only be called after `on_message_callback` triggers.
-    /// Otherwise it will result in an error.
-    pub fn send_message_to_all(&self, message: &str) {
+    fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+        self.inner
+            .borrow()
+            .connections
+            .get(&user_id)
+            .ok_or_else(|| JsValue::from_str(&format!("no connection for user {}", user_id.inner)))?
+            .data_channel
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str(&format!("no data channel setup yet for user {}", user_id.inner)))?
+            .send_with_str(message)
+    }
+
+    fn send_message_to_all(&self, message: &str) {
         for data_channel in self
             .inner
             .borrow()
@@ -95,7 +102,71 @@ impl NetworkManager {
             .values()
             .filter_map(|connection| connection.data_channel.as_ref())
         {
-            data_channel.send_with_str(message);
+            data_channel.send_with_str(message).expect("one of data channels is already closed");
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MiniServer {
+    inner: NetworkManager,
+}
+
+impl MiniServer {
+    pub fn new(
+        ws_ip_address: &str,
+        session_id: SessionId,
+        connection_type: ConnectionType,
+    ) -> Result<Self, JsValue> {
+        Ok(MiniServer {
+            inner: NetworkManager::new(ws_ip_address, session_id, connection_type, true)?,
+        })
+    }
+
+    pub fn start(
+        &mut self,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    ) -> Result<(), JsValue> {
+        self.inner.start(on_open_callback, on_message_callback)
+    }
+
+    pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+        self.inner.send_message(user_id, message)
+    }
+
+    pub fn send_message_to_all(&self, message: &str) {
+        self.inner.send_message_to_all(message)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MiniClient {
+    inner: NetworkManager,
+}
+
+impl MiniClient {
+    pub fn new(
+        ws_ip_address: &str,
+        session_id: SessionId,
+        connection_type: ConnectionType,
+    ) -> Result<Self, JsValue> {
+        Ok(MiniClient {
+            inner: NetworkManager::new(ws_ip_address, session_id, connection_type, false)?,
+        })
+    }
+
+    pub fn start(
+        &mut self,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    ) -> Result<(), JsValue> {
+        self.inner.start(on_open_callback, on_message_callback)
+    }
+
+    pub fn send_message_to_host(&self, message: &str) -> Result<(), JsValue> {
+        self.inner.send_message_to_all(message);
+        // TODO: we always return success, but this is subject to change
+        Ok(())
     }
 }

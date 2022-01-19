@@ -2,7 +2,7 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use rusty_games_library::one_to_many::NetworkManager;
+use rusty_games_library::one_to_many::{MiniClient, MiniServer};
 use rusty_games_library::ConnectionType;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -17,11 +17,10 @@ wasm_bindgen_test_configure!(run_in_browser);
 
 #[wasm_bindgen_test]
 fn network_manager_starts_successfully() {
-    let mut server = NetworkManager::new(
+    let mut server = MiniServer::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
-        true,
     )
     .unwrap();
     server.start(|_| {}, |_, _| {}).unwrap();
@@ -32,11 +31,10 @@ fn single_message_passes_both_ways() {
     let server_received_message = Rc::new(RefCell::new(false));
     let client_received_message = Rc::new(RefCell::new(false));
 
-    let mut server = NetworkManager::new(
+    let mut server = MiniServer::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
-        true,
     )
     .unwrap();
     let server_open_connections_count = Rc::new(RefCell::new(0));
@@ -68,11 +66,10 @@ fn single_message_passes_both_ways() {
     server.start(server_on_open, server_on_message).unwrap();
 
     let client_generator = || {
-        let mut client = NetworkManager::new(
+        let mut client = MiniClient::new(
             WS_IP_ADDRESS,
             SessionId::new("dummy-session-id".to_string()),
             ConnectionType::Stun,
-            false,
         )
         .unwrap();
         let client_on_open = |_| { /* do nothing */ };
@@ -81,12 +78,11 @@ fn single_message_passes_both_ways() {
             let client_received_message = client_received_message.clone();
             move |_, message| {
                 console::log_1(&format!("client received message: {}", message).into());
-                client_clone.send_message_to_all("pong!");
+                client_clone.send_message_to_host("pong!");
                 *client_received_message.borrow_mut() = true;
             }
         };
         client.start(client_on_open, client_on_message).unwrap();
-        client
     };
     client_generator();
     client_generator();
