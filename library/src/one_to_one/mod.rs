@@ -128,6 +128,9 @@ impl NetworkManager {
             .data_channel
             .as_ref()
             .ok_or_else(|| JsValue::from_str("no data channel set on instance yet"))?
-            .send_with_str(message)
+            // this is an ugly fix to the fact, that if you send empty string as message
+            // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
+            // message
+            .send_with_str(&format!("x{}", message))
     }
 }

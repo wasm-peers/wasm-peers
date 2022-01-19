@@ -65,7 +65,7 @@ pub mod one_to_many;
 pub mod one_to_one;
 mod utils;
 
-pub use rusty_games_protocol::{UserId, SessionId};
+pub use rusty_games_protocol::{SessionId, UserId};
 pub use utils::ConnectionType;
 
 /// Returns a new SessionId instance that can be used to identify a session by signaling server.

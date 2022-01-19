@@ -124,10 +124,12 @@ pub(crate) async fn handle_websocket_message(
                 .borrow()
                 .connections
                 .get(&user_id)
-                .unwrap_or_else(|| panic!(
-                    "(is_host: {}) no connection to send answer for given user_id: {:?}",
-                    is_host, &user_id
-                ))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "(is_host: {}) no connection to send answer for given user_id: {:?}",
+                        is_host, &user_id
+                    )
+                })
                 .peer_connection
                 .clone();
             let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
@@ -146,10 +148,12 @@ pub(crate) async fn handle_websocket_message(
                 .borrow()
                 .connections
                 .get(&user_id)
-                .unwrap_or_else(|| panic!(
-                    "no connection to send ice candidate to for given user_id: {:?}",
-                    &user_id
-                ))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "no connection to send ice candidate to for given user_id: {:?}",
+                        &user_id
+                    )
+                })
                 .peer_connection
                 .clone();
             debug!("peer received ice candidate: {}", &ice_candidate);

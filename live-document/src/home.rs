@@ -1,4 +1,4 @@
-use rusty_games_library::{get_random_session_id, SessionId};
+use rusty_games_library::get_random_session_id;
 use yew::prelude::*;
 use yew_router::prelude::*;
 use crate::document::DocumentQuery;
@@ -37,7 +37,7 @@ impl Component for Home {
         let start_as_host = {
             let history = history.clone();
             Callback::once(move |_| {
-                history.push_with_query(Route::Document, DocumentQuery::new(get_random_session_id().inner)).unwrap();
+                history.push_with_query(Route::Document, DocumentQuery::new(get_random_session_id().inner, true)).unwrap();
             })
         };
         let update_input = ctx
@@ -46,7 +46,7 @@ impl Component for Home {
         let join_existing = {
             let session_id = self.input.clone();
             Callback::once(move |_| {
-                history.push_with_query(Route::Document, DocumentQuery::new(session_id)).unwrap();
+                history.push_with_query(Route::Document, DocumentQuery::new(session_id, false)).unwrap();
             })
         };
         html! {

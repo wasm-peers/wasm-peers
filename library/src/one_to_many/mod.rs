@@ -8,6 +8,7 @@ use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_o
 use crate::ConnectionType;
 use rusty_games_protocol::{SessionId, UserId};
 use std::rc::Rc;
+use log::debug;
 use wasm_bindgen::JsValue;
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
 
@@ -90,8 +91,16 @@ impl NetworkManager {
             .ok_or_else(|| JsValue::from_str(&format!("no connection for user {}", user_id.inner)))?
             .data_channel
             .as_ref()
-            .ok_or_else(|| JsValue::from_str(&format!("no data channel setup yet for user {}", user_id.inner)))?
-            .send_with_str(message)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "no data channel setup yet for user {}",
+                    user_id.inner
+                ))
+            })?
+            // this is an ugly fix to the fact, that if you send empty string as message
+            // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
+            // message
+            .send_with_str(&format!("x{}", message))
     }
 
     fn send_message_to_all(&self, message: &str) {
@@ -102,7 +111,12 @@ impl NetworkManager {
             .values()
             .filter_map(|connection| connection.data_channel.as_ref())
         {
-            data_channel.send_with_str(message).expect("one of data channels is already closed");
+            data_channel
+                // this is an ugly fix to the fact, that if you send empty string as message
+                // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
+                // message
+                .send_with_str(&format!("x{}", message))
+                .expect("one of data channels is already closed");
         }
     }
 }
