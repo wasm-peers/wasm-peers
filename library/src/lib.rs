@@ -59,7 +59,8 @@ client.start(client_on_open, client_on_message).unwrap();
 ```
 */
 
-#[deny(missing_docs)]
+// #[deny(missing_docs)]
+
 pub mod one_to_many;
 pub mod one_to_one;
 mod utils;
