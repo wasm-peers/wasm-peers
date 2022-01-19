@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::{IsHost, SessionId, UserId};
+use serde::{Deserialize, Serialize};
 
 /// Enum used by all Client, Mini-server and Signaling server to communicate with each other
 /// Two main categories are messages used to setup signaling session

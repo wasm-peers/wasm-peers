@@ -127,7 +127,12 @@ pub(crate) fn set_data_channel_on_message(
             // this is an ugly fix to the fact, that if you send empty string as message
             // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
             // message
-            on_message_callback(message.strip_prefix('x').expect("messages must have a fix-bug x prepended").to_string());
+            on_message_callback(
+                message
+                    .strip_prefix('x')
+                    .expect("messages must have a fix-bug x prepended")
+                    .to_string(),
+            );
         }
     }) as Box<dyn FnMut(MessageEvent)>);
     data_channel.set_onmessage(Some(datachannel_on_message.as_ref().unchecked_ref()));

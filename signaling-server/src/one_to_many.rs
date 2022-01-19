@@ -138,12 +138,6 @@ async fn user_message(
                     }
                     // pass answer to the other user in session without changing anything
                     SignalMessage::SdpAnswer(session_id, recipient_id, answer) => {
-                        let session_reader = sessions.read().await;
-                        let host_id = session_reader
-                            .get(&session_id)
-                            .expect("no session id for requested SdpAnswer")
-                            .host
-                            .expect("no host for requested SdpAnswer");
                         let response = SignalMessage::SdpAnswer(session_id, sender_id, answer);
                         let response = serde_json::to_string(&response).unwrap();
                         let connections_reader = connections.read().await;

@@ -4,16 +4,16 @@
 
 // #![deny(missing_docs)]
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-pub mod one_to_one;
 pub mod one_to_many;
+pub mod one_to_one;
 
 /// Unique identifier of signaling session that each user provides
 /// when communicating with the signaling server
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct SessionId {
-    pub inner: String
+    pub inner: String,
 }
 
 impl SessionId {
@@ -24,7 +24,7 @@ impl SessionId {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct UserId {
-    pub inner: usize
+    pub inner: usize,
 }
 
 impl UserId {

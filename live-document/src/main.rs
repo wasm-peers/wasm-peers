@@ -45,7 +45,7 @@ fn switch(routes: &Route) -> Html {
         Route::Home => {
             html! { <Home /> }
         }
-        Route::Document  => {
+        Route::Document => {
             html! { <Document /> }
         }
     }

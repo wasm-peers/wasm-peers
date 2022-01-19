@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use warp::Filter;
 
-use rusty_games_signaling_server::{one_to_one, one_to_many};
+use rusty_games_signaling_server::{one_to_many, one_to_one};
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +24,9 @@ async fn main() {
             .and(connections)
             .and(sessions)
             .map(|ws: warp::ws::Ws, connections, sessions| {
-                ws.on_upgrade(move |socket| one_to_one::user_connected(socket, connections, sessions))
+                ws.on_upgrade(move |socket| {
+                    one_to_one::user_connected(socket, connections, sessions)
+                })
             })
     };
 
@@ -40,7 +42,9 @@ async fn main() {
             .and(connections)
             .and(sessions)
             .map(|ws: warp::ws::Ws, connections, sessions| {
-                ws.on_upgrade(move |socket| one_to_many::user_connected(socket, connections, sessions))
+                ws.on_upgrade(move |socket| {
+                    one_to_many::user_connected(socket, connections, sessions)
+                })
             })
     };
 
