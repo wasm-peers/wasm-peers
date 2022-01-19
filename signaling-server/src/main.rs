@@ -6,30 +6,50 @@ use std::str::FromStr;
 
 use warp::Filter;
 
-use rusty_games_signaling_server::one_to_many::{user_connected, Connections, Sessions};
+use rusty_games_signaling_server::{one_to_one, one_to_many};
 
 #[tokio::main]
 async fn main() {
     TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed).unwrap();
 
-    let connections = Connections::default();
-    let connections = warp::any().map(move || connections.clone());
+    let one_to_one_signaling = {
+        let connections = one_to_one::Connections::default();
+        let connections = warp::any().map(move || connections.clone());
 
-    let sessions = Sessions::default();
-    let sessions = warp::any().map(move || sessions.clone());
+        let sessions = one_to_one::Sessions::default();
+        let sessions = warp::any().map(move || sessions.clone());
 
-    let signaling = warp::path("ws")
-        .and(warp::ws())
-        .and(connections)
-        .and(sessions)
-        .map(|ws: warp::ws::Ws, connections, sessions| {
-            ws.on_upgrade(move |socket| user_connected(socket, connections, sessions))
-        });
+        warp::path("one-to-one")
+            .and(warp::ws())
+            .and(connections)
+            .and(sessions)
+            .map(|ws: warp::ws::Ws, connections, sessions| {
+                ws.on_upgrade(move |socket| one_to_one::user_connected(socket, connections, sessions))
+            })
+    };
+
+    let one_to_many_signaling = {
+        let connections = one_to_many::Connections::default();
+        let connections = warp::any().map(move || connections.clone());
+
+        let sessions = one_to_many::Sessions::default();
+        let sessions = warp::any().map(move || sessions.clone());
+
+        warp::path("one-to-many")
+            .and(warp::ws())
+            .and(connections)
+            .and(sessions)
+            .map(|ws: warp::ws::Ws, connections, sessions| {
+                ws.on_upgrade(move |socket| one_to_many::user_connected(socket, connections, sessions))
+            })
+    };
+
+    let routes = one_to_one_signaling.or(one_to_many_signaling);
 
     let address = env::args()
         .nth(1)
         .unwrap_or_else(|| "127.0.0.1:9001".to_string());
     let address = SocketAddr::from_str(&address).expect("invalid ip address provided");
 
-    warp::serve(signaling).run(address).await;
+    warp::serve(routes).run(address).await;
 }

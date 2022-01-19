@@ -11,7 +11,7 @@ use rusty_games_protocol::SessionId;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use web_sys::console;
 
-const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/ws";
+const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/one-to-many";
 
 wasm_bindgen_test_configure!(run_in_browser);
 

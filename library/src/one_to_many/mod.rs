@@ -8,7 +8,6 @@ use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_o
 use crate::ConnectionType;
 use rusty_games_protocol::{SessionId, UserId};
 use std::rc::Rc;
-use log::debug;
 use wasm_bindgen::JsValue;
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
 
