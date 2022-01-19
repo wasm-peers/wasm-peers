@@ -88,7 +88,6 @@ impl NetworkManager {
     /// and thus should only be called after `on_message_callback` triggers.
     /// Otherwise it will result in an error.
     pub fn send_message_to_all(&self, message: &str) {
-        debug!("server will try to send a message: {:?}", &message);
         for data_channel in self
             .inner
             .borrow()

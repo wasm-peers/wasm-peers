@@ -78,17 +78,31 @@ async fn user_message(
 
                         if is_host && session.host.is_none() {
                             session.host = Some(sender_id);
+                            // start connections with all already present users
                             for client_id in &session.users {
-                                // start connections with all already present users
-                                let host_tx = connections_reader
-                                    .get(&sender_id)
-                                    .expect("host not in connections");
-                                let host_response =
-                                    SignalMessage::SessionReady(session_id.clone(), *client_id);
-                                let host_response = serde_json::to_string(&host_response).unwrap();
-                                host_tx
-                                    .send(Message::text(&host_response))
-                                    .expect("failed to send SessionReady message to host");
+                                {
+                                    let host_tx = connections_reader
+                                        .get(&sender_id)
+                                        .expect("host not in connections");
+                                    let host_response =
+                                        SignalMessage::SessionReady(session_id.clone(), *client_id);
+                                    let host_response =
+                                        serde_json::to_string(&host_response).unwrap();
+                                    host_tx
+                                        .send(Message::text(&host_response))
+                                        .expect("failed to send SessionReady message to host");
+                                }
+                                // {
+                                //     let client_tx = connections_reader
+                                //         .get(&client_id)
+                                //         .expect("host not in connections");
+                                //     let client_response =
+                                //         SignalMessage::SessionReady(session_id.clone(), sender_id);
+                                //     let client_response = serde_json::to_string(&client_response).unwrap();
+                                //     client_tx
+                                //         .send(Message::text(&client_response))
+                                //         .expect("failed to send SessionReady message to host");
+                                // }
                             }
                         } else if is_host && session.host.is_some() {
                             error!(
@@ -123,11 +137,17 @@ async fn user_message(
                         }
                     }
                     // pass answer to the other user in session without changing anything
-                    SignalMessage::SdpAnswer(session_id, user_id, answer) => {
-                        let response = SignalMessage::SdpAnswer(session_id, user_id, answer);
+                    SignalMessage::SdpAnswer(session_id, recipient_id, answer) => {
+                        let session_reader = sessions.read().await;
+                        let host_id = session_reader
+                            .get(&session_id)
+                            .expect("no session id for requested SdpAnswer")
+                            .host
+                            .expect("no host for requested SdpAnswer");
+                        let response = SignalMessage::SdpAnswer(session_id, sender_id, answer);
                         let response = serde_json::to_string(&response).unwrap();
                         let connections_reader = connections.read().await;
-                        if let Some(recipient_tx) = connections_reader.get(&user_id) {
+                        if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
                             recipient_tx.send(Message::text(response)).unwrap();
                         } else {
                             warn!("tried to send offer to non existing user");
