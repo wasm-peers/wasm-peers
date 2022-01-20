@@ -40,7 +40,7 @@ impl Component for Home {
                 history
                     .push_with_query(
                         Route::Document,
-                        DocumentQuery::new(get_random_session_id().inner, true),
+                        DocumentQuery::new(get_random_session_id().into_inner(), true),
                     )
                     .unwrap();
             })

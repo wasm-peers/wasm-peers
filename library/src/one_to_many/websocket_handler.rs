@@ -15,8 +15,8 @@ use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
 };
 
-/// basically a state automata spread across host, client and signaling server
-/// handling each step in session and then WebRTC setup
+/// Basically a state automata spread across host, client and signaling server
+/// handling each step in session and then WebRTC setup.
 pub(crate) async fn handle_websocket_message(
     network_manager: NetworkManager,
     message: SignalMessage,
@@ -53,8 +53,8 @@ pub(crate) async fn handle_websocket_message(
             set_peer_connection_on_ice_gathering_state_change(&peer_connection);
             set_peer_connection_on_negotiation_needed(&peer_connection);
 
-            let data_channel = peer_connection
-                .create_data_channel(&format!("{}-{}", session_id.inner, peer_id.inner));
+            let data_channel =
+                peer_connection.create_data_channel(&format!("{}-{}", session_id, peer_id));
             set_data_channel_on_open(&data_channel, peer_id, on_open_callback.clone());
             set_data_channel_on_error(&data_channel);
             set_data_channel_on_message(&data_channel, peer_id, on_message_callback.clone());

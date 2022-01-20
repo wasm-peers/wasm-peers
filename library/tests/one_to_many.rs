@@ -4,10 +4,9 @@
 
 use rusty_games_library::one_to_many::{MiniClient, MiniServer};
 use rusty_games_library::ConnectionType;
+use rusty_games_protocol::SessionId;
 use std::cell::RefCell;
 use std::rc::Rc;
-
-use rusty_games_protocol::SessionId;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use web_sys::console;
 

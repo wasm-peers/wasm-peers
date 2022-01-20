@@ -154,7 +154,7 @@ impl Component for Document {
         };
         html! {
             <main>
-                <p> { "Session id: " } { &self.session_id.inner } </p>
+                <p> { "Session id: " } { &self.session_id } </p>
                 <textarea id={ "document-textarea" } { disabled } { placeholder } { oninput }/>
             </main>
         }

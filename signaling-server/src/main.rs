@@ -53,7 +53,7 @@ async fn main() {
     let address = env::args()
         .nth(1)
         .unwrap_or_else(|| "127.0.0.1:9001".to_string());
-    let address = SocketAddr::from_str(&address).expect("invalid ip address provided");
+    let address = SocketAddr::from_str(&address).expect("invalid IP address provided");
 
     warp::serve(routes).run(address).await;
 }

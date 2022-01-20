@@ -24,7 +24,6 @@ pub(crate) fn set_peer_connection_on_data_channel(
     on_open_callback: impl FnMut() + Clone + 'static,
     on_message_callback: impl FnMut(String) + Clone + 'static,
 ) {
-    // peer_connection on data channel
     let on_datachannel = Closure::wrap(Box::new(move |data_channel_event: RtcDataChannelEvent| {
         info!("received data channel");
         let data_channel = data_channel_event.channel();
@@ -124,11 +123,11 @@ pub(crate) fn set_data_channel_on_message(
                 "message from datachannel (will call on_message): {:?}",
                 message
             );
-            // this is an ugly fix to the fact, that if you send empty string as message
-            // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-            // message
             on_message_callback(
                 message
+                    // this is an ugly fix to the fact, that if you send empty string as message
+                    // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
+                    // message
                     .strip_prefix('x')
                     .expect("messages must have a fix-bug x prepended")
                     .to_string(),

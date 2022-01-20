@@ -8,8 +8,8 @@ use web_sys::{
     WebSocket,
 };
 
-/// basically a state automata spread across host, client and signaling server
-/// handling each step in session and then WebRTC setup
+/// Basically a state automata spread across host, client and signaling server,
+/// handling each step in session and then WebRTC setup.
 pub(crate) async fn handle_websocket_message(
     message: SignalMessage,
     peer_connection: RtcPeerConnection,

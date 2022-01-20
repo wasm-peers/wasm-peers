@@ -7,60 +7,17 @@ As creator of agar.io famously stated [WebRTC is hard](https://news.ycombinator.
 This library aims to help, by abstracting away all the setup, and providing a simple way to send
 and receive messages over the data channel.
 
-It's as easy as providing address to a signaling server instance and specifying two callbacks.
-One for when the connection opens, and one for the messages received.
+It's as easy as providing address to a signaling server instance from
+[accompanying crate](../rusty_games_signaling_server/index.html) and specifying two callbacks.
+One for when a connection opens, and one for when a message is received.
 After that you can send messages back and forth without worrying about the implementation details.
 
-# Example
+Library contains two network topologies, [one-to-one](one_to_one), which creates an equal connection between two peers
+and [one-to-many](one_to_many), which specifies a host and arbitrary number of clients.
 
-This example shows two peers sending `ping` and `pong` messages to each other.
-
-```
-use rusty_games_library::ConnectionType;
-use rusty_games_library::one_to_one::NetworkManager;
-use web_sys::console;
-
-let session_id = SessionId::new("some-session-id".to_string());
-let mut server = NetworkManager::new(
-    WS_IP_ADDRESS,
-    session_id.clone(),
-    ConnectionType::Stun,
-)
-.unwrap();
-
-let server_clone = server.clone();
-let server_on_open = move || server_clone.send_message("ping!").unwrap();
-let server_on_message = {
-    let server_received_message = server_received_message.clone();
-    move |message| {
-        console::log_1(&format!("server received message: {}", message).into());
-        *server_received_message.borrow_mut() = true;
-    }
-};
-server.start(server_on_open, server_on_message).unwrap();
-
-let mut client = NetworkManager::new(
-    WS_IP_ADDRESS,
-    session_id,
-    ConnectionType::Stun,
-)
-.unwrap();
-let client_on_open = || { /* do nothing */ };
-let client_clone = client.clone();
-let client_on_message = {
-    let client_received_message = client_received_message.clone();
-    move |message| {
-        console::log_1(&format!("client received message: {}", message).into());
-        client_clone.send_message("pong!").unwrap();
-        *client_received_message.borrow_mut() = true;
-    }
-};
-client.start(client_on_open, client_on_message).unwrap();
-```
 */
 
-// #[deny(missing_docs)]
-
+#[warn(missing_docs)]
 pub mod one_to_many;
 pub mod one_to_one;
 mod utils;
