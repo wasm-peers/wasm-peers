@@ -92,17 +92,6 @@ async fn user_message(
                                         .send(Message::text(&host_response))
                                         .expect("failed to send SessionReady message to host");
                                 }
-                                // {
-                                //     let client_tx = connections_reader
-                                //         .get(&client_id)
-                                //         .expect("host not in connections");
-                                //     let client_response =
-                                //         SignalMessage::SessionReady(session_id.clone(), sender_id);
-                                //     let client_response = serde_json::to_string(&client_response).unwrap();
-                                //     client_tx
-                                //         .send(Message::text(&client_response))
-                                //         .expect("failed to send SessionReady message to host");
-                                // }
                             }
                         } else if is_host && session.host.is_some() {
                             error!(

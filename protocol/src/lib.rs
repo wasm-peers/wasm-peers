@@ -44,14 +44,6 @@ impl Display for SessionId {
     }
 }
 
-impl Deref for SessionId {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 /// Unique identifier of each peer connected to signaling server
 /// useful when communicating in one-to-many and many-to-many topologies.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]

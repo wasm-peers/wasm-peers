@@ -142,7 +142,7 @@ impl NetworkManager {
             ..
         } = self.inner.borrow().clone();
 
-        let data_channel = peer_connection.create_data_channel(&session_id);
+        let data_channel = peer_connection.create_data_channel(&session_id.clone().into_inner());
         debug!(
             "data_channel created with label: {:?}",
             data_channel.label()
