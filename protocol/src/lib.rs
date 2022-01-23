@@ -10,6 +10,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
 
+pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;
 

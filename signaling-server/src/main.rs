@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use warp::Filter;
 
-use rusty_games_signaling_server::{one_to_many, one_to_one};
+use rusty_games_signaling_server::{many_to_many, one_to_many, one_to_one};
 
 #[tokio::main]
 async fn main() {
@@ -48,7 +48,27 @@ async fn main() {
             })
     };
 
-    let routes = one_to_one_signaling.or(one_to_many_signaling);
+    let many_to_many_signaling = {
+        let connections = many_to_many::Connections::default();
+        let connections = warp::any().map(move || connections.clone());
+
+        let sessions = many_to_many::Sessions::default();
+        let sessions = warp::any().map(move || sessions.clone());
+
+        warp::path("many-to-many")
+            .and(warp::ws())
+            .and(connections)
+            .and(sessions)
+            .map(|ws: warp::ws::Ws, connections, sessions| {
+                ws.on_upgrade(move |socket| {
+                    many_to_many::user_connected(socket, connections, sessions)
+                })
+            })
+    };
+
+    let routes = one_to_one_signaling
+        .or(one_to_many_signaling)
+        .or(many_to_many_signaling);
 
     let address = env::args()
         .nth(1)

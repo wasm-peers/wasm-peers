@@ -17,9 +17,10 @@ and [one-to-many](one_to_many), which specifies a host and arbitrary number of c
 
 */
 
-#[warn(missing_docs)]
+pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;
+#[warn(missing_docs)]
 mod utils;
 
 pub use rusty_games_protocol::{SessionId, UserId};

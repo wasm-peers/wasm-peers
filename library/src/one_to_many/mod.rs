@@ -125,7 +125,7 @@ pub(crate) struct NetworkManager {
 }
 
 impl NetworkManager {
-    fn new(
+    pub(crate) fn new(
         ws_ip_address: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
@@ -145,7 +145,7 @@ impl NetworkManager {
         })
     }
 
-    fn start(
+    pub(crate) fn start(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
@@ -166,7 +166,7 @@ impl NetworkManager {
         Ok(())
     }
 
-    fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+    pub(crate) fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
         self.inner
             .borrow()
             .connections
@@ -183,7 +183,7 @@ impl NetworkManager {
             .send_with_str(&format!("x{}", message))
     }
 
-    fn send_message_to_all(&self, message: &str) {
+    pub(crate) fn send_message_to_all(&self, message: &str) {
         for data_channel in self
             .inner
             .borrow()
