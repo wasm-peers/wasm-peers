@@ -25,7 +25,6 @@ impl SessionId {
         SessionId(inner)
     }
 
-
     /// Return reference to the underling string
     pub fn as_str(&self) -> &str {
         &self.0

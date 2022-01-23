@@ -4,9 +4,12 @@ There must be exactly one instance of [MiniServer] and arbitrary number of [Mini
 connected to the same session.
 
 A RtcPeerConnection with an accompanying RtcDataChannel will be established between the [MiniServer]
-and each of the [MiniClient]'s. [MiniServer] can decide whether to send a message to a single peer,
-identified by [UserId] returned by signaling server during connection establishment with [MiniServer::send_message]
-method, or to fire to all clients with [MiniServer::send_message_to_all].
+and each of the [MiniClient]'s. [MiniServer] can decide whether to send a message to a single peer
+with [MiniServer::send_message], or to fire to all clients with [MiniServer::send_message_to_all].
+
+
+identified by [UserId] returned by signaling server during connection establishment
+method
 [MiniClient] only has an option to message the host with [MiniClient::send_message_to_host].
 
 # Example
@@ -86,12 +89,11 @@ client_generator();
 mod callbacks;
 mod websocket_handler;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
 use crate::ConnectionType;
 use rusty_games_protocol::{SessionId, UserId};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};

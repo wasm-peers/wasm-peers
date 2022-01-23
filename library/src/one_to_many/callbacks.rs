@@ -1,18 +1,15 @@
+use crate::one_to_many::{websocket_handler, NetworkManager};
+use crate::utils::IceCandidate;
 use js_sys::JsString;
 use log::{debug, error, info};
+use rusty_games_protocol::one_to_many::SignalMessage;
+use rusty_games_protocol::{SessionId, UserId};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-
 use web_sys::{
     MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcPeerConnection,
     RtcPeerConnectionIceEvent, WebSocket,
 };
-
-use rusty_games_protocol::one_to_many::SignalMessage;
-use rusty_games_protocol::{SessionId, UserId};
-
-use crate::one_to_many::{websocket_handler, NetworkManager};
-use crate::utils::IceCandidate;
 
 /// also calls:
 /// * set_data_channel_on_open

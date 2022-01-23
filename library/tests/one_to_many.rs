@@ -3,8 +3,7 @@
 #![cfg(target_arch = "wasm32")]
 
 use rusty_games_library::one_to_many::{MiniClient, MiniServer};
-use rusty_games_library::ConnectionType;
-use rusty_games_protocol::SessionId;
+use rusty_games_library::{ConnectionType, SessionId};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};

@@ -53,15 +53,6 @@ let client_on_message = {
 client.start(client_on_open, client_on_message).unwrap();
 ```
 */
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use log::debug;
-use wasm_bindgen::JsValue;
-use web_sys::RtcPeerConnection;
-use web_sys::{RtcDataChannel, WebSocket};
-
-use rusty_games_protocol::SessionId;
 
 use crate::one_to_one::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
@@ -71,6 +62,13 @@ use crate::one_to_one::callbacks::{
     set_websocket_on_message, set_websocket_on_open,
 };
 use crate::utils::{create_peer_connection, ConnectionType};
+use log::debug;
+use rusty_games_protocol::SessionId;
+use std::cell::RefCell;
+use std::rc::Rc;
+use wasm_bindgen::JsValue;
+use web_sys::RtcPeerConnection;
+use web_sys::{RtcDataChannel, WebSocket};
 
 mod callbacks;
 mod websocket_handler;

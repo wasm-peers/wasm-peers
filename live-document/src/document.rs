@@ -1,11 +1,11 @@
+use rusty_games_library::many_to_many::NetworkManager;
+use rusty_games_library::{get_random_session_id, ConnectionType, SessionId};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlTextAreaElement, UrlSearchParams};
 use yew::{html, Component, Context, Html};
-use rusty_games_library::many_to_many::NetworkManager;
-use rusty_games_library::{get_random_session_id, ConnectionType, SessionId};
 
 pub(crate) enum DocumentMsg {
     UpdateValue,
