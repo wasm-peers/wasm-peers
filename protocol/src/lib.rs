@@ -25,6 +25,11 @@ impl SessionId {
         SessionId(inner)
     }
 
+
+    /// Return reference to the underling string
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
     /// Acquire the underlying type
     pub fn into_inner(self) -> String {
         self.0

@@ -40,7 +40,7 @@ impl Component for Home {
                 history
                     .push_with_query(
                         Route::Document,
-                        DocumentQuery::new(get_random_session_id().into_inner(), true),
+                        DocumentQuery::new(get_random_session_id().into_inner()),
                     )
                     .unwrap();
             })
@@ -52,17 +52,23 @@ impl Component for Home {
             let session_id = self.input.clone();
             Callback::once(move |_| {
                 history
-                    .push_with_query(Route::Document, DocumentQuery::new(session_id, false))
+                    .push_with_query(Route::Document, DocumentQuery::new(session_id))
                     .unwrap();
             })
         };
         html! {
             <div>
-                <div>
+                <div style="border:1px solid black; text-align:center">
+                    <p>{ "Live Document is a shared document application akin to Google Docs." }</p>
+                    <p>{ "Create new document, or join existing one." }</p>
+                    <p>{ "Document lives as long as somebody is in session." }</p>
+                    <p>{ "Persistent storage coming soon!" }</p>
+                </div>
+                <div style="text-align:center">
                     <p>{ "Start as host" }</p>
                     <button onclick={ start_as_host }>{ "Start as host" }</button>
                 </div>
-                <div>
+                <div style="text-align:center">
                     <p>{ "Join existing document" }</p>
                     <input
                         value={ self.input.clone() }

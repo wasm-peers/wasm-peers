@@ -8,7 +8,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 
-use rusty_games_protocol::many_to_many::SignalMessage;
+use rusty_games_protocol::one_to_many::SignalMessage;
 use rusty_games_protocol::{SessionId, UserId};
 
 #[derive(Default, Debug)]
@@ -68,7 +68,7 @@ async fn user_message(
             Ok(request) => {
                 info!("message received from user {:?}: {:?}", sender_id, request);
                 match request {
-                    SignalMessage::SessionJoin(session_id) => {
+                    SignalMessage::SessionJoin(session_id, _) => {
                         let mut sessions_writer = sessions.write().await;
                         let session = sessions_writer
                             .entry(session_id.clone())
@@ -89,6 +89,7 @@ async fn user_message(
                                     .expect("failed to send SessionReady message to host");
                             }
                         }
+                        session.users.insert(sender_id);
                     }
                     // pass offer to the other user in session without changing anything
                     SignalMessage::SdpOffer(session_id, recipient_id, offer) => {
