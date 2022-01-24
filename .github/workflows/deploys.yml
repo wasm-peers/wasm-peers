@@ -6,35 +6,6 @@ on:
       - main
 
 jobs:
-  deploy-live-document:
-    runs-on: ubuntu-latest
-    steps:
-      # Step 1
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Install AWS CLI
-        uses: unfor19/install-aws-cli-action@v1
-        with:
-          version: 1
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-      # Step 2
-      - name: Install wasm32-unknown-uknown target and trunk
-        run: rustup target add wasm32-unknown-unknown
-      - name: Install trunk
-        run: cargo install trunk
-      - name: Build yew app with trunk
-        run: cd ./live-document/ && WS_IP_PORT=${{ secrets.WS_IP_PORT}} trunk build --release
-      - name: Deploy app build to S3 bucket
-        run: aws s3 sync ./live-document/dist/ s3://rusty-games --delete --acl public-read
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-          VERBOSE: TRUE
-
   deploy-library-documentation:
     runs-on: ubuntu-latest
     steps:
