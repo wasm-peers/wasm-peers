@@ -18,7 +18,7 @@ fn network_manager_starts_successfully() {
     let mut server = NetworkManager::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Local,
     )
     .unwrap();
     server.start(|| {}, |_| {}).unwrap();
@@ -32,7 +32,7 @@ fn single_message_passes_both_ways() {
     let mut server = NetworkManager::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Local,
     )
     .unwrap();
 
@@ -50,7 +50,7 @@ fn single_message_passes_both_ways() {
     let mut client = NetworkManager::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Local,
     )
     .unwrap();
     let client_on_open = || { /* do nothing */ };

@@ -135,7 +135,7 @@ mod test {
 
     #[wasm_bindgen_test]
     fn test_create_stun_peer_connection_is_successful() {
-        let peer_connection = create_peer_connection(ConnectionType::Local)
+        let peer_connection = create_peer_connection(&ConnectionType::Local)
             .expect("creating peer connection failed!");
         assert_eq!(
             peer_connection.ice_connection_state(),

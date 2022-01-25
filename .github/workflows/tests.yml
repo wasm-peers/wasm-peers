@@ -9,6 +9,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: cd signaling-server && cargo run &
-      - run: cd library && WS_IP_PORT=127.0.0.1:9001 wasm-pack test --headless --firefox
-      - run: cd library && WS_IP_PORT=127.0.0.1:9001 wasm-pack test --headless --chrome
+      - run: cargo run &
+        working-directory: ./signaling-server
+      - run: wasm-pack test --headless --firefox
+        working-directory: ./library
+        env:
+          WS_IP_PORT: 127.0.0.1:9001
+      - run: wasm-pack test --headless --chrome
+        working-directory: ./library
+        env:
+          WS_IP_PORT: 127.0.0.1:9001

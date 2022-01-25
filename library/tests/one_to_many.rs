@@ -18,7 +18,7 @@ fn network_manager_starts_successfully() {
     let mut server = MiniServer::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Local,
     )
     .unwrap();
     server.start(|_| {}, |_, _| {}).unwrap();
@@ -32,7 +32,7 @@ fn single_message_passes_both_ways() {
     let mut server = MiniServer::new(
         WS_IP_ADDRESS,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Local,
     )
     .unwrap();
     let server_open_connections_count = Rc::new(RefCell::new(0));
@@ -67,7 +67,7 @@ fn single_message_passes_both_ways() {
         let mut client = MiniClient::new(
             WS_IP_ADDRESS,
             SessionId::new("dummy-session-id".to_string()),
-            ConnectionType::Stun,
+            ConnectionType::Local,
         )
         .unwrap();
         let client_on_open = |_| { /* do nothing */ };
