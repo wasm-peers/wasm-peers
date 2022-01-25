@@ -35,7 +35,7 @@ pub(crate) async fn handle_websocket_message(
                 peer_id, session_id
             );
             let peer_connection =
-                create_peer_connection(network_manager.inner.borrow().connection_type).unwrap();
+                create_peer_connection(&network_manager.inner.borrow().connection_type).unwrap();
             set_peer_connection_on_data_channel(
                 &peer_connection,
                 peer_id,
@@ -76,7 +76,7 @@ pub(crate) async fn handle_websocket_message(
         SignalMessage::SdpOffer(session_id, user_id, offer) => {
             // non-host peer received an offer
             let peer_connection =
-                create_peer_connection(network_manager.inner.borrow().connection_type).unwrap();
+                create_peer_connection(&network_manager.inner.borrow().connection_type).unwrap();
             set_peer_connection_on_data_channel(
                 &peer_connection,
                 user_id,

@@ -110,7 +110,7 @@ impl NetworkManager {
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
-        let peer_connection = create_peer_connection(connection_type)?;
+        let peer_connection = create_peer_connection(&connection_type)?;
 
         let websocket = WebSocket::new(ws_ip_address)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);

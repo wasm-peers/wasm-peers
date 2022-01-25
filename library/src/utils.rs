@@ -5,8 +5,6 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{RtcConfiguration, RtcPeerConnection};
 use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
 
-const STUN_SERVER: &str = "stun:stun.l.google.com:19302";
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct IceCandidate {
     pub candidate: String,
@@ -15,27 +13,34 @@ pub(crate) struct IceCandidate {
 }
 
 /// Specifies what kind of peer connection to create
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum ConnectionType {
     /// Within local network
     Local,
     /// Setup with STUN server, WAN capabilities but can fail
-    Stun,
-    /// Setup with STUN and TURN servers, will fallback to TURN if needed, most stable connection
-    StunAndTurn,
+    Stun {
+        urls: String
+    },
+    /// Setup with STUN and TURN servers and fallback to TURN if needed, most stable connection
+    StunAndTurn {
+        stun_urls: String,
+        turn_urls: String,
+        username: String,
+        credential: String,
+    },
 }
 
 pub(crate) fn create_peer_connection(
-    connection_type: ConnectionType,
+    connection_type: &ConnectionType,
 ) -> Result<RtcPeerConnection, JsValue> {
     match connection_type {
         ConnectionType::Local => RtcPeerConnection::new(),
-        ConnectionType::Stun => {
+        ConnectionType::Stun { urls } => {
             let ice_servers = Array::new();
             {
                 let server_entry = Object::new();
 
-                Reflect::set(&server_entry, &"urls".into(), &STUN_SERVER.into())?;
+                Reflect::set(&server_entry, &"urls".into(), &urls.into())?;
 
                 ice_servers.push(&*server_entry);
             }
@@ -45,7 +50,30 @@ pub(crate) fn create_peer_connection(
 
             RtcPeerConnection::new_with_configuration(&rtc_configuration)
         }
-        ConnectionType::StunAndTurn => unimplemented!(),
+        ConnectionType::StunAndTurn { stun_urls, turn_urls, username, credential } => {
+            let ice_servers = Array::new();
+            {
+                let stun_server_entry = Object::new();
+
+                Reflect::set(&stun_server_entry, &"urls".into(), &stun_urls.into())?;
+
+                ice_servers.push(&*stun_server_entry);
+            }
+            {
+                let turn_server_entry = Object::new();
+
+                Reflect::set(&turn_server_entry, &"urls".into(), &turn_urls.into())?;
+                Reflect::set(&turn_server_entry, &"username".into(), &username.into())?;
+                Reflect::set(&turn_server_entry, &"credential".into(), &credential.into())?;
+
+                ice_servers.push(&*turn_server_entry);
+            }
+
+            let mut rtc_configuration = RtcConfiguration::new();
+            rtc_configuration.ice_servers(&ice_servers);
+
+            RtcPeerConnection::new_with_configuration(&rtc_configuration)
+        }
     }
 }
 
