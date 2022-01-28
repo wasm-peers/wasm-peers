@@ -17,7 +17,7 @@ and [one-to-many](one_to_many), which specifies a host and arbitrary number of c
 
 */
 
-#[warn(missing_docs)]
+#[deny(missing_docs)]
 pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;

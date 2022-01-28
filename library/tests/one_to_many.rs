@@ -9,14 +9,14 @@ use std::rc::Rc;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use web_sys::console;
 
-const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/one-to-many";
+const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
 
 wasm_bindgen_test_configure!(run_in_browser);
 
 #[wasm_bindgen_test]
 fn network_manager_starts_successfully() {
     let mut server = MiniServer::new(
-        WS_IP_ADDRESS,
+        SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Local,
     )
@@ -30,7 +30,7 @@ fn single_message_passes_both_ways() {
     let client_received_message = Rc::new(RefCell::new(false));
 
     let mut server = MiniServer::new(
-        WS_IP_ADDRESS,
+        SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Local,
     )
@@ -65,7 +65,7 @@ fn single_message_passes_both_ways() {
 
     let client_generator = || {
         let mut client = MiniClient::new(
-            WS_IP_ADDRESS,
+            SIGNALING_SERVER_URL,
             SessionId::new("dummy-session-id".to_string()),
             ConnectionType::Local,
         )

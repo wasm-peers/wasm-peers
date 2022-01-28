@@ -13,11 +13,11 @@ use rusty_games_library::ConnectionType;
 use rusty_games_library::one_to_one::NetworkManager;
 use web_sys::console;
 
-const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/one-to-one";
+const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
 
 let session_id = SessionId::new("some-session-id".to_string());
 let mut server = NetworkManager::new(
-    WS_IP_ADDRESS,
+    SIGNALING_SERVER_URL,
     session_id.clone(),
     ConnectionType::Stun,
 )
@@ -35,7 +35,7 @@ let server_on_message = {
 server.start(server_on_open, server_on_message).unwrap();
 
 let mut client = NetworkManager::new(
-    WS_IP_ADDRESS,
+    SIGNALING_SERVER_URL,
     session_id,
     ConnectionType::Stun,
 )
@@ -106,13 +106,13 @@ impl NetworkManager {
     /// Requires an IP address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
     pub fn new(
-        ws_ip_address: &str,
+        signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
         let peer_connection = create_peer_connection(&connection_type)?;
 
-        let websocket = WebSocket::new(ws_ip_address)?;
+        let websocket = WebSocket::new(signaling_server_url)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         Ok(NetworkManager {
@@ -174,7 +174,7 @@ impl NetworkManager {
 
     /// Send message to the other end of the connection.
     /// It might fail if the connection is not yet set up
-    /// and thus should only be called after `on_message_callback` triggers.
+    /// and thus should only be called after `on_open_callback` triggers.
     /// Otherwise it will result in an error.
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
         debug!("server will try to send a message: {:?}", &message);

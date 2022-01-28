@@ -1,11 +1,11 @@
 /*!
-Library module for implementation of many-to-many topology of communication.
+Library module for implementation of the many-to-many topology of peer communication.
 
 Each peer in session is an equal, with ability to send and receive messages from any other peer.
 Unlike with one-to-many topology, any peer can leave at any time without compromising the network.
 
 To identify peers you should store [UserId] accessible inside `on_open_callback` in some custom structure.
-Then you can use it in [NetworkManager::send_message] to specify exactly which peer should recievie the message.
+Then you can use it in [NetworkManager::send_message] to specify exactly which peer should receive the message.
 
 # Example
 
@@ -21,14 +21,15 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use web_sys::console;
 
-const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/one-to-many";
+// there should be a signaling server from accompanying crate listening on this port
+const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
 
 let opened_connections_count = Rc::new(RefCell::new(0));
 let received_messages_count = Rc::new(RefCell::new(0));
 
 let peer_generator = || {
     let mut server = NetworkManager::new(
-        WS_IP_ADDRESS,
+        SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
     )
@@ -97,12 +98,12 @@ impl NetworkManager {
     /// Requires an IP address of an signaling server instance,
     /// session id by which it will identify connecting other peers and type of connection.
     pub fn new(
-        ws_ip_address: &str,
+        signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
         Ok(NetworkManager {
-            inner: OneToManyNetworkManager::new(ws_ip_address, session_id, connection_type, true)?,
+            inner: OneToManyNetworkManager::new(signaling_server_url, session_id, connection_type, true)?,
         })
     }
 
@@ -124,7 +125,7 @@ impl NetworkManager {
         self.inner.send_message(user_id, message)
     }
 
-    /// Convenience function that sends the same message to all connected peers.
+    /// Convenience method that sends the same message to all connected peers.
     pub fn send_message_to_all(&self, message: &str) {
         self.inner.send_message_to_all(message)
     }

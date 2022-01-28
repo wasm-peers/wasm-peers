@@ -3,7 +3,7 @@ Helper crate that declares common types and structures shared between [rusty-gam
 and [rusty-games-signaling-server](../rusty_games_signaling_server/index.html).
 */
 
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};

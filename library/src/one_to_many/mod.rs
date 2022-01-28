@@ -1,22 +1,20 @@
 /*!
-Library module for one-to-many network topology in client-server architecture.
-There must be exactly one instance of [MiniServer] and arbitrary number of [MiniClient]'s
+Library module for the one-to-many topology in client-server architecture.
+There can be exactly one instance of [MiniServer] and arbitrary number of [MiniClient]'s
 connected to the same session.
 
 A RtcPeerConnection with an accompanying RtcDataChannel will be established between the [MiniServer]
-and each of the [MiniClient]'s. [MiniServer] can decide whether to send a message to a single peer
+and each of the [MiniClient]'s. [MiniServer] can decide whether to send a message to a single peer,
+identified by [UserId] returned by signaling server during connection establishment method,
 with [MiniServer::send_message], or to fire to all clients with [MiniServer::send_message_to_all].
 
-
-identified by [UserId] returned by signaling server during connection establishment
-method
 [MiniClient] only has an option to message the host with [MiniClient::send_message_to_host].
 
 # Example
 
 This example shows three peers connecting, with one being a dedicated host.
-Host waits for both peers to connect and then sends `ping` messages to both
-and they independently respond with `pong` messages.
+Host waits for both peers to connect and only then sends `ping` messages to both
+and clients independently respond with `pong` messages.
 
 ```
 use rusty_games_library::one_to_many::{MiniClient, MiniServer};
@@ -26,10 +24,10 @@ use std::rc::Rc;
 use rusty_games_protocol::SessionId;
 use web_sys::console;
 
-const WS_IP_ADDRESS: &str = "ws://0.0.0.0:9001/one-to-many";
+const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
 
 let mut server = MiniServer::new(
-    WS_IP_ADDRESS,
+    SIGNALING_SERVER_URL,
     SessionId::new("dummy-session-id".to_string()),
     ConnectionType::Stun,
 )
@@ -64,7 +62,7 @@ server.start(server_on_open, server_on_message).unwrap();
 
 let client_generator = || {
     let mut client = MiniClient::new(
-        WS_IP_ADDRESS,
+        SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun,
     )
@@ -128,12 +126,12 @@ pub(crate) struct NetworkManager {
 
 impl NetworkManager {
     pub(crate) fn new(
-        ws_ip_address: &str,
+        signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
         is_host: bool,
     ) -> Result<Self, JsValue> {
-        let websocket = WebSocket::new(ws_ip_address)?;
+        let websocket = WebSocket::new(signaling_server_url)?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         Ok(NetworkManager {
@@ -228,12 +226,12 @@ impl MiniServer {
     /// Requires an IP address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
     pub fn new(
-        ws_ip_address: &str,
+        signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
         Ok(MiniServer {
-            inner: NetworkManager::new(ws_ip_address, session_id, connection_type, true)?,
+            inner: NetworkManager::new(signaling_server_url, session_id, connection_type, true)?,
         })
     }
 
@@ -271,12 +269,12 @@ pub struct MiniClient {
 impl MiniClient {
     /// Same as [MiniServer::new]
     pub fn new(
-        ws_ip_address: &str,
+        signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
         Ok(MiniClient {
-            inner: NetworkManager::new(ws_ip_address, session_id, connection_type, false)?,
+            inner: NetworkManager::new(signaling_server_url, session_id, connection_type, false)?,
         })
     }
 
