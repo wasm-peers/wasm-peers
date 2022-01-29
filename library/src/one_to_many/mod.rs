@@ -191,12 +191,12 @@ impl NetworkManager {
             .values()
             .filter_map(|connection| connection.data_channel.as_ref())
         {
-            data_channel
+            // TODO: some may fail, should we return a list results?
+            let _ = data_channel
                 // this is an ugly fix to the fact, that if you send empty string as message
                 // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
                 // message
-                .send_with_str(&format!("x{}", message))
-                .expect("one of data channels is already closed");
+                .send_with_str(&format!("x{}", message));
         }
     }
 }
