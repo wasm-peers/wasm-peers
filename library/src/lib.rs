@@ -12,8 +12,9 @@ It's as easy as providing address to a signaling server instance from
 One for when a connection opens, and one for when a message is received.
 After that you can send messages back and forth without worrying about the implementation details.
 
-Library contains two network topologies, [one-to-one](one_to_one), which creates an equal connection between two peers
-and [one-to-many](one_to_many), which specifies a host and arbitrary number of clients.
+Library contains three network topologies, [one-to-one](one_to_one), which creates an equal connection between two peers,
+[one-to-many](one_to_many), which specifies a host and arbitrary number of clients
+and [many-to-many] that creates connection for pair of peers and allows sending messages to any of them.
 
 */
 
