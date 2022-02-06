@@ -1,6 +1,6 @@
 use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 use ::log::{debug, error, info};
-use rusty_games_protocol::one_to_one::SignalMessage;
+use wasm_peers_protocol::one_to_one::SignalMessage;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -83,38 +83,39 @@ pub(crate) async fn handle_websocket_message(
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use mockall::mock;
-    use wasm_bindgen_test::wasm_bindgen_test_configure;
-
-    use rusty_games_protocol::SessionId;
-
-    wasm_bindgen_test_configure!(run_in_browser);
-
-    mock! {
-        WebSocket {}
-    }
-
-    // #[wasm_bindgen_test]
-    async fn test_handle_session_ready_signal_is_successful() {
-        let message =
-            SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
-        let peer_connection = RtcPeerConnection::new().unwrap();
-
-        // TODO: this should be mocked, but how do you pass a mock to a function expecting different type?
-        //  I could introduce a trait, implement it for web_sys::WebSocket and MockWebSocket as well,
-        //  but that's a lot of work...
-        //  This is a integration test for now.
-        let websocket = WebSocket::new("ws://0.0.0.0:9001/ws")
-            .expect("local signaling server instance was not found");
-        websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
-
-        // FIXME: this fails because peer_connection state gets modified in other tests
-        handle_websocket_message(message, peer_connection.clone(), websocket)
-            .await
-            .unwrap();
-        assert!(peer_connection.local_description().is_some());
-    }
-}
+// // TODO(tkarwowski): uncomment once mocks work
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     use mockall::mock;
+//     use wasm_bindgen_test::wasm_bindgen_test_configure;
+//
+//     use wasm_peers_protocol::SessionId;
+//
+//     wasm_bindgen_test_configure!(run_in_browser);
+//
+//     mock! {
+//         WebSocket {}
+//     }
+//
+//     #[wasm_bindgen_test]
+//     async fn test_handle_session_ready_signal_is_successful() {
+//         let message =
+//             SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
+//         let peer_connection = RtcPeerConnection::new().unwrap();
+//
+//         // TODO(tkarwowski): this should be mocked, but how do you pass a mock to a function expecting different type?
+//         //  I could introduce a trait, implement it for web_sys::WebSocket and MockWebSocket as well,
+//         //  but that's a lot of work...
+//         //  This is a integration test for now.
+//         let websocket = WebSocket::new("ws://0.0.0.0:9001/ws")
+//             .expect("local signaling server instance was not found");
+//         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
+//
+//         // FIXME(tkarwowski): this fails because peer_connection state gets modified in other tests
+//         handle_websocket_message(message, peer_connection.clone(), websocket)
+//             .await
+//             .unwrap();
+//         assert!(peer_connection.local_description().is_some());
+//     }
+// }

@@ -9,8 +9,8 @@ with [NetworkManager::send_message] method.
 This example shows two peers sending `ping` and `pong` messages to each other.
 
 ```
-use rusty_games_library::ConnectionType;
-use rusty_games_library::one_to_one::NetworkManager;
+use wasm_peers::ConnectionType;
+use wasm_peers::one_to_one::NetworkManager;
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
@@ -63,7 +63,7 @@ use crate::one_to_one::callbacks::{
 };
 use crate::utils::{create_peer_connection, ConnectionType};
 use log::debug;
-use rusty_games_protocol::SessionId;
+use wasm_peers_protocol::SessionId;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;

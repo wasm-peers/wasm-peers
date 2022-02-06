@@ -1,6 +1,6 @@
 [package]
-name = "rusty-games-protocol"
-version = "0.2.0"
+name = "wasm-peers-protocol"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]

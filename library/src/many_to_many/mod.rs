@@ -15,8 +15,8 @@ Also each peer will respond with a `pong` response.
 Overall we will expect 6 `ping` and 6 `pong` messages (3 connections, both peers in each).
 ```
 
-use rusty_games_library::many_to_many::NetworkManager;
-use rusty_games_library::{ConnectionType, SessionId};
+use wasm_peers::many_to_many::NetworkManager;
+use wasm_peers::{ConnectionType, SessionId};
 use std::cell::RefCell;
 use std::rc::Rc;
 use web_sys::console;
@@ -70,7 +70,7 @@ peer_generator();
 
 use crate::one_to_many::NetworkManager as OneToManyNetworkManager;
 use crate::ConnectionType;
-use rusty_games_protocol::{SessionId, UserId};
+use wasm_peers_protocol::{SessionId, UserId};
 use wasm_bindgen::JsValue;
 
 /// Abstraction over WebRTC peer-to-peer connection.
@@ -103,7 +103,12 @@ impl NetworkManager {
         connection_type: ConnectionType,
     ) -> Result<Self, JsValue> {
         Ok(NetworkManager {
-            inner: OneToManyNetworkManager::new(signaling_server_url, session_id, connection_type, true)?,
+            inner: OneToManyNetworkManager::new(
+                signaling_server_url,
+                session_id,
+                connection_type,
+                true,
+            )?,
         })
     }
 

@@ -2,8 +2,8 @@ use crate::one_to_one::{websocket_handler, NetworkManager};
 use crate::utils::IceCandidate;
 use js_sys::JsString;
 use log::{debug, error, info};
-use rusty_games_protocol::one_to_one::SignalMessage;
-use rusty_games_protocol::SessionId;
+use wasm_peers_protocol::one_to_one::SignalMessage;
+use wasm_peers_protocol::SessionId;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{

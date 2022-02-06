@@ -1,5 +1,5 @@
 /*!
-Helper crate that declares common types and structures shared between [rusty-games-library](../rusty_games_library/index.html)
+Helper crate that declares common types and structures shared between [rusty-games-library](../wasm_peers/index.html)
 and [rusty-games-signaling-server](../rusty_games_signaling_server/index.html).
 */
 

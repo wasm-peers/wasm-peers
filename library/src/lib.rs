@@ -1,5 +1,5 @@
 /*!
-This crate provides an easy to use wrapper around WebRTC and DataChannels for a peer to peer connections.
+This crate provides an easy-to-use wrapper around WebRTC and DataChannels for a peer to peer connections.
 
 # Overview
 
@@ -14,17 +14,20 @@ After that you can send messages back and forth without worrying about the imple
 
 Library contains three network topologies, [one-to-one](one_to_one), which creates an equal connection between two peers,
 [one-to-many](one_to_many), which specifies a host and arbitrary number of clients
-and [many-to-many] that creates connection for pair of peers and allows sending messages to any of them.
+and [many-to-many] that creates connection for a pair of peers and allows sending messages to any of them.
 
 */
 
 #[deny(missing_docs)]
+#[cfg(feature = "many-to-many")]
 pub mod many_to_many;
+#[cfg(feature = "one-to-many")]
 pub mod one_to_many;
+#[cfg(feature = "one-to-one")]
 pub mod one_to_one;
 mod utils;
 
-pub use rusty_games_protocol::{SessionId, UserId};
+pub use wasm_peers_protocol::{SessionId, UserId};
 pub use utils::ConnectionType;
 
 /// Returns a new SessionId instance that can be used to identify a session by signaling server.

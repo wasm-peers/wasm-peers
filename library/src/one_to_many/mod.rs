@@ -17,11 +17,11 @@ Host waits for both peers to connect and only then sends `ping` messages to both
 and clients independently respond with `pong` messages.
 
 ```
-use rusty_games_library::one_to_many::{MiniClient, MiniServer};
-use rusty_games_library::ConnectionType;
+use wasm_peers::one_to_many::{MiniClient, MiniServer};
+use wasm_peers::ConnectionType;
 use std::cell::RefCell;
 use std::rc::Rc;
-use rusty_games_protocol::SessionId;
+use wasm_peers_protocol::SessionId;
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
@@ -89,7 +89,7 @@ mod websocket_handler;
 
 use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
 use crate::ConnectionType;
-use rusty_games_protocol::{SessionId, UserId};
+use wasm_peers_protocol::{SessionId, UserId};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -191,7 +191,7 @@ impl NetworkManager {
             .values()
             .filter_map(|connection| connection.data_channel.as_ref())
         {
-            // TODO: some may fail, should we return a list results?
+            // TODO(tkarwowski): some may fail, should we return a list results?
             let _ = data_channel
                 // this is an ugly fix to the fact, that if you send empty string as message
                 // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
@@ -281,7 +281,7 @@ impl MiniClient {
     /// Same as [MiniServer::start]
     pub fn start(
         &mut self,
-        // FIXME: MiniServer callbacks should take UserId as argument, it will always be host's.
+        // FIXME(tkarwowski): MiniServer callbacks should take UserId as argument, it will always be host's.
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
     ) -> Result<(), JsValue> {
@@ -291,7 +291,7 @@ impl MiniClient {
     /// Way of communicating with peer-server
     pub fn send_message_to_host(&self, message: &str) -> Result<(), JsValue> {
         self.inner.send_message_to_all(message);
-        // TODO: we always return success, but this is subject to change
+        // TODO(tkarwowski): we always return success, but this is subject to change
         Ok(())
     }
 }

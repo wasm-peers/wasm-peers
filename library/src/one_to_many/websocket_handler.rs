@@ -7,8 +7,8 @@ use crate::one_to_many::callbacks::{
 use crate::one_to_many::{Connection, NetworkManager};
 use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
 use log::{debug, error, info};
-use rusty_games_protocol::one_to_many::SignalMessage;
-use rusty_games_protocol::UserId;
+use wasm_peers_protocol::one_to_many::SignalMessage;
+use wasm_peers_protocol::UserId;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -157,7 +157,7 @@ pub(crate) async fn handle_websocket_message(
                 .peer_connection
                 .clone();
             debug!("peer received ice candidate: {}", &ice_candidate);
-            // TODO: IceCandidate should already be struct inside signal message
+            // TODO(tkarwowski): IceCandidate should already be struct inside signal message
             let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)
                 .expect("failed to deserialize IceCandidate");
 
@@ -192,7 +192,7 @@ pub(crate) async fn handle_websocket_message(
 //     use mockall::mock;
 //     use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 //     use web_sys::{RtcIceConnectionState, RtcIceGatheringState};
-//     use rusty_games_protocol::SessionId;
+//     use wasm_peers_protocol::SessionId;
 //
 //     wasm_bindgen_test_configure!(run_in_browser);
 //
@@ -205,7 +205,7 @@ pub(crate) async fn handle_websocket_message(
 //         let message = SignalMessage::SessionReady(SessionId::new("dummy-session-id".to_string()), true);
 //         let peer_connection = RtcPeerConnection::new().unwrap();
 //
-//         // TODO: this should be mocked, but how do you pass a mock to a function expecting different type?
+//         // TODO(tkarwowski): this should be mocked, but how do you pass a mock to a function expecting different type?
 //         //  I could introduce a trait, implement it for web_sys::WebSocket and MockWebSocket as well,
 //         //  but that's a lot of work...
 //         //  This is a integration test for now.
@@ -213,7 +213,7 @@ pub(crate) async fn handle_websocket_message(
 //             .expect("local signaling server instance was not found");
 //         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 //
-//         // FIXME: this fails because peer_connection state gets modified in other tests
+//         // FIXME(tkarwowski): this fails because peer_connection state gets modified in other tests
 //         handle_websocket_message(message, peer_connection.clone(), websocket)
 //             .await
 //             .unwrap();

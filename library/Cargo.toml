@@ -1,14 +1,17 @@
 [package]
-name = "rusty-games-library"
-version = "0.2.0"
-authors = ["Tomek Karwowski <to.karwowski@gmail.com>"]
+name = "wasm-peers"
+version = "0.3.0"
+authors = ["Tomasz Karwowski <to.karwowski@gmail.com>"]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
+default = ["one-to-one", "one-to-many", "many-to-many", "console_error_panic_hook"]
+one-to-one = []
+one-to-many = []
+many-to-many = []
 
 [dependencies]
 console_error_panic_hook = { version = "0.1", optional = true }
@@ -21,7 +24,7 @@ log = "0.4"
 wasm-logger = "0.2"
 uuid = { version = "0.8", features = ["v4", "stdweb"] }
 
-rusty-games-protocol = {path = "../protocol"}
+wasm-peers-protocol = { path = "../protocol", version = "0.3" }
 
 [dependencies.web-sys]
 version = "0.3.22"

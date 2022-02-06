@@ -2,11 +2,11 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use rusty_games_library::one_to_many::{MiniClient, MiniServer};
-use rusty_games_library::{ConnectionType, SessionId};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
+use wasm_peers::one_to_many::{MiniClient, MiniServer};
+use wasm_peers::{ConnectionType, SessionId};
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
@@ -76,7 +76,7 @@ fn single_message_passes_both_ways() {
             let client_received_message = client_received_message.clone();
             move |_, message| {
                 console::log_1(&format!("client received message: {}", message).into());
-                client_clone.send_message_to_host("pong!");
+                client_clone.send_message_to_host("pong!").unwrap();
                 *client_received_message.borrow_mut() = true;
             }
         };

@@ -2,11 +2,11 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use rusty_games_library::many_to_many::NetworkManager;
-use rusty_games_library::{ConnectionType, SessionId};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
+use wasm_peers::many_to_many::NetworkManager;
+use wasm_peers::{ConnectionType, SessionId};
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
@@ -43,7 +43,7 @@ fn single_message_passes_between_all() {
             move |user_id| {
                 console::log_1(&format!("connection to user established: {:?}", user_id).into());
                 *opened_connections_count.borrow_mut() += 1;
-                server_clone.send_message(user_id, "ping!");
+                server_clone.send_message(user_id, "ping!").unwrap();
             }
         };
 
@@ -59,7 +59,7 @@ fn single_message_passes_between_all() {
                     .into(),
                 );
                 *received_messages_count.borrow_mut() += 1;
-                server_clone.send_message(user_id, "pong!");
+                server_clone.send_message(user_id, "pong!").unwrap();
             }
         };
         server.start(server_on_open, server_on_message).unwrap();

@@ -18,9 +18,7 @@ pub enum ConnectionType {
     /// Within local network
     Local,
     /// Setup with STUN server, WAN capabilities but can fail
-    Stun {
-        urls: String
-    },
+    Stun { urls: String },
     /// Setup with STUN and TURN servers and fallback to TURN if needed, most stable connection
     StunAndTurn {
         stun_urls: String,
@@ -50,7 +48,12 @@ pub(crate) fn create_peer_connection(
 
             RtcPeerConnection::new_with_configuration(&rtc_configuration)
         }
-        ConnectionType::StunAndTurn { stun_urls, turn_urls, username, credential } => {
+        ConnectionType::StunAndTurn {
+            stun_urls,
+            turn_urls,
+            username,
+            credential,
+        } => {
             let ice_servers = Array::new();
             {
                 let stun_server_entry = Object::new();

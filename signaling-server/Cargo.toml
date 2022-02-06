@@ -1,7 +1,7 @@
 [package]
-name = "rusty-games-signaling-server"
-version = "0.2.0"
-authors = ["Tomek Karwowski <to.karwowski@gmail.com>"]
+name = "wasm-peers-signaling-server"
+version = "0.3.0"
+authors = ["Tomasz Karwowski <to.karwowski@gmail.com>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,4 +16,4 @@ warp = "0.3.2"
 simplelog = "0.8.0"
 log = "0.4.8"
 
-rusty-games-protocol = {path = "../protocol"}
+wasm-peers-protocol = { path = "../protocol", version = "0.3" }
