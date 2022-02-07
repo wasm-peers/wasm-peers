@@ -14,7 +14,7 @@ After that you can send messages back and forth without worrying about the imple
 
 Library contains three network topologies, [one-to-one](one_to_one), which creates an equal connection between two peers,
 [one-to-many](one_to_many), which specifies a host and arbitrary number of clients
-and [many-to-many] that creates connection for a pair of peers and allows sending messages to any of them.
+and [many-to-many] that creates connection for each pair of peers and allows sending messages to any of them.
 
 */
 
