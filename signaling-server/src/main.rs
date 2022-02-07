@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use warp::Filter;
 
-use rusty_games_signaling_server::{many_to_many, one_to_many, one_to_one};
+use wasm_peers_signaling_server::{many_to_many, one_to_many, one_to_one};
 
 #[tokio::main]
 async fn main() {

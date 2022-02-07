@@ -12,7 +12,7 @@ categories = ["wasm", "network-programming", "web-programming"]
 readme = "../README.md"
 
 [dependencies]
-futures-util = "0.3.18"
+futures-util = "0.3.21"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.72"
 tokio = { version = "1.14.0", features = ["macros", "rt-multi-thread"] }
