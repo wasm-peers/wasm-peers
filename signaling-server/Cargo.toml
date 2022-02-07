@@ -3,8 +3,13 @@ name = "wasm-peers-signaling-server"
 version = "0.3.0"
 authors = ["Tomasz Karwowski <to.karwowski@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+description = "Easy-to-use wrapper for WebRTC DataChannels peer-to-peer connections written in Rust and compiling to WASM."
+#homepage
+repository = "https://github.com/wasm-peers/wasm-peers"
+keywords = ["wasm", "webrtc", "datachannels", "peer-to-peer", "webassembly"]
+categories = ["wasm", "network-programming", "web-programming"]
+readme = "../README.md"
 
 [dependencies]
 futures-util = "0.3.18"
