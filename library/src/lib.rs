@@ -8,7 +8,7 @@ This library aims to help, by abstracting away all the setup, and providing a si
 and receive messages over the data channel.
 
 It's as easy as providing address to a signaling server instance from
-[accompanying crate](../rusty_games_signaling_server/index.html) and specifying two callbacks.
+[accompanying crate](../wasm_peers_signaling_server/index.html) and specifying two callbacks.
 One for when a connection opens, and one for when a message is received.
 After that you can send messages back and forth without worrying about the implementation details.
 

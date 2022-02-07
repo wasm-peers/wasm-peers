@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Easy-to-use wrapper for WebRTC DataChannels peer-to-peer connections written in Rust and compiling to WASM."
 #homepage
 repository = "https://github.com/wasm-peers/wasm-peers"
-keywords = ["wasm", "webrtc", "datachannels", "peer-to-peer", "webassembly"]
+keywords = ["wasm", "webrtc", "datachannel", "peer-to-peer", "webassembly"]
 categories = ["wasm", "network-programming", "web-programming"]
 readme = "../README.md"
 

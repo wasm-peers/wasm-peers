@@ -209,7 +209,7 @@ impl NetworkManager {
 /// for when the connection opens and for handling incoming messages.
 /// It also provides a method of sending data to the other end of the connection.
 ///
-/// Only works with [rusty-games-signaling-server](../../rusty_games_signaling_server/index.html) instance,
+/// Only works with [wasm-peers-signaling-server](../../wasm_peers_signaling_server/index.html) instance,
 /// whose full IP address must be provided.
 ///
 /// Startup flow is divided into two methods [MiniServer::new] and [MiniServer::start]

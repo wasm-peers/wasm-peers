@@ -88,10 +88,16 @@ This project is licensed under either of
 * MIT license ([LICENSE-MIT](LICENSE-MIT) or
   http://opensource.org/licenses/MIT)
 
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license,
+shall be dual licensed as above, without any additional terms or conditions.
+
 ## Acknowledgments
 
 These projects helped me grasp WebRTC in Rust:
 * [Yew WebRTC Chat](https://github.com/codec-abc/Yew-WebRTC-Chat)
-* [WebRTC in RUst](https://github.com/Charles-Schleich/WebRTC-in-Rust)
+* [WebRTC in Rust](https://github.com/Charles-Schleich/WebRTC-in-Rust)
 
 Also, special thanks to the guys with whom I did my B.Eng. thesis.
