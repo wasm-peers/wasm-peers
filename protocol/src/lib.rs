@@ -1,6 +1,6 @@
 /*!
-Helper crate that declares common types and structures shared between [wasm-peers](../wasm_peers/index.html)
-and [wasm-peers-signaling-server](../wasm_peers_signaling_server/index.html).
+Helper crate that declares common types and structures shared between [wasm-peers](https://docs.rs/wasm-peers/latest/wasm_peers/)
+and [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/).
 */
 
 #![deny(missing_docs)]

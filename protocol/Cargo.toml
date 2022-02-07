@@ -1,6 +1,6 @@
 [package]
 name = "wasm-peers-protocol"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Easy-to-use wrapper for WebRTC DataChannels peer-to-peer connections written in Rust and compiling to WASM."
