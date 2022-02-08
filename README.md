@@ -65,7 +65,7 @@ fn main() {
 }
 ```
 
-For examples for other topologies check out the docs.
+For examples of other topologies check out the [docs](https://docs.rs/wasm-peers/latest/wasm_peers/).
 
 For a more advanced example check out "production ready" app built with this library: [Live Document](https://github.com/wasm-peers/live-document). 
 

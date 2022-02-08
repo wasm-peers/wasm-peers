@@ -8,7 +8,7 @@ description = "Easy-to-use wrapper for WebRTC DataChannels peer-to-peer connecti
 repository = "https://github.com/wasm-peers/wasm-peers"
 keywords = ["wasm", "webrtc", "datachannel", "peer-to-peer", "webassembly"]
 categories = ["wasm", "network-programming", "web-programming"]
-readme = "../README.md"
+readme = "README.md"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
