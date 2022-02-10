@@ -1,3 +1,4 @@
+![logo](logo.png)
 # wasm-peers
 
 This crate provides an easy-to-use wrapper around WebRTC and DataChannels for a peer-to-peer connections.
