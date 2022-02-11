@@ -12,12 +12,16 @@ and receive messages over the data channel.
 
 It's as easy as providing address to a signaling server instance from
 [accompanying crate](https://github.com/wasm-peers/wasm-peers/tree/main/signaling-server) and specifying two callbacks.
-One for when a connection opens, and one for when a message is received.
+One that specifies what should happen when a connection is established, and one for when a message is received.
 After that you can send messages back and forth without worrying about the implementation details.
 
 Library contains three network topologies, `one-to-one`, which creates an equal connection between two peers,
 `one-to-many`, which specifies a host and arbitrary number of clients
 and `many-to-many` that creates connection for each pair of peers and allows sending messages to any of them.
+
+
+For a "production ready" apps built with this
+library check out either [Live Document](https://github.com/wasm-peers/live-document#readme) or [Footballers](https://github.com/wasm-peers/footballers#readme).
 
 ## Example
 
@@ -68,9 +72,6 @@ fn main() {
 ```
 
 For examples of other topologies check out the [docs](https://docs.rs/wasm-peers/latest/wasm_peers/).
-
-For a more advanced example check out "production ready" app built with this
-library: [Live Document](https://github.com/wasm-peers/live-document).
 
 ## Authors
 
