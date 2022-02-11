@@ -1,4 +1,5 @@
-![logo](logo.png)
+<img style="display: block; margin-left: auto; margin-right: auto" src="logo.png" alt="wasm-peers logo">
+
 # wasm-peers
 
 This crate provides an easy-to-use wrapper around WebRTC and DataChannels for a peer-to-peer connections.
@@ -31,44 +32,45 @@ use web_sys::console;
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
 
 fn main() {
-  // there must be some mechanism for exchanging session ids between peers
-  let session_id = SessionId::new("some-session-id".to_string());
-  let mut peer1 = NetworkManager::new(
-    SIGNALING_SERVER_URL,
-    session_id.clone(),
-    ConnectionType::Stun,
-  ).unwrap();
+    // there must be some mechanism for exchanging session ids between peers
+    let session_id = SessionId::new("some-session-id".to_string());
+    let mut peer1 = NetworkManager::new(
+        SIGNALING_SERVER_URL,
+        session_id.clone(),
+        ConnectionType::Stun,
+    ).unwrap();
 
-  let peer1_clone = peer1.clone();
-  let peer1_on_open = move || peer1_clone.send_message("ping!").unwrap();
-  let peer1_on_message = {
-    move |message| {
-      console::log_1(&format!("peer1 received message: {}", message).into());
-    }
-  };
-  peer1.start(peer1_on_open, peer1_on_message).unwrap();
+    let peer1_clone = peer1.clone();
+    let peer1_on_open = move || peer1_clone.send_message("ping!").unwrap();
+    let peer1_on_message = {
+        move |message| {
+            console::log_1(&format!("peer1 received message: {}", message).into());
+        }
+    };
+    peer1.start(peer1_on_open, peer1_on_message).unwrap();
 
-  let mut peer2 = NetworkManager::new(
-    SIGNALING_SERVER_URL,
-    session_id,
-    ConnectionType::Stun,
-  ).unwrap();
-  let peer2_on_open = || { /* do nothing */ };
-  let peer2_clone = peer2.clone();
-  let peer2_on_message = {
-    let peer2_received_message = peer2_received_message.clone();
-    move |message| {
-      console::log_1(&format!("peer2 received message: {}", message).into());
-      peer2_clone.send_message("pong!").unwrap();
-    }
-  };
-  peer2.start(peer2_on_open, peer2_on_message).unwrap();
+    let mut peer2 = NetworkManager::new(
+        SIGNALING_SERVER_URL,
+        session_id,
+        ConnectionType::Stun,
+    ).unwrap();
+    let peer2_on_open = || { /* do nothing */ };
+    let peer2_clone = peer2.clone();
+    let peer2_on_message = {
+        let peer2_received_message = peer2_received_message.clone();
+        move |message| {
+            console::log_1(&format!("peer2 received message: {}", message).into());
+            peer2_clone.send_message("pong!").unwrap();
+        }
+    };
+    peer2.start(peer2_on_open, peer2_on_message).unwrap();
 }
 ```
 
 For examples of other topologies check out the [docs](https://docs.rs/wasm-peers/latest/wasm_peers/).
 
-For a more advanced example check out "production ready" app built with this library: [Live Document](https://github.com/wasm-peers/live-document). 
+For a more advanced example check out "production ready" app built with this
+library: [Live Document](https://github.com/wasm-peers/live-document).
 
 ## Authors
 
@@ -78,26 +80,24 @@ Tomasz Karwowski
 ## Version History
 
 * 0.3
-  * Initial release to the public
+    * Initial release to the public
 
 ## License
 
 This project is licensed under either of
 
-* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or
-  http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 ## Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license,
-shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as
+defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 ## Acknowledgments
 
 These projects helped me grasp WebRTC in Rust:
+
 * [Yew WebRTC Chat](https://github.com/codec-abc/Yew-WebRTC-Chat)
 * [WebRTC in Rust](https://github.com/Charles-Schleich/WebRTC-in-Rust)
 
