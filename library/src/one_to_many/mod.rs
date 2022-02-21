@@ -119,6 +119,7 @@ struct NetworkManagerInner {
     is_host: bool,
     connections: HashMap<UserId, Connection>,
 }
+
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkManager {
     inner: Rc<RefCell<NetworkManagerInner>>,
@@ -278,13 +279,14 @@ impl MiniClient {
         })
     }
 
-    /// Same as [MiniServer::start]
+    /// Same as [MiniServer::start], but callbacks don't take UserId argument, as it will always be host.
     pub fn start(
         &mut self,
-        // FIXME(tkarwowski): MiniServer callbacks should take UserId as argument, it will always be host's.
-        on_open_callback: impl FnMut(UserId) + Clone + 'static,
-        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+        mut on_open_callback: impl FnMut() + Clone + 'static,
+        mut on_message_callback: impl FnMut(String) + Clone + 'static,
     ) -> Result<(), JsValue> {
+        let on_open_callback = move |_| on_open_callback();
+        let on_message_callback = move |_, message| on_message_callback(message);
         self.inner.start(on_open_callback, on_message_callback)
     }
 
