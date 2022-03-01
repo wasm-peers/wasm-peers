@@ -2,10 +2,10 @@ use crate::one_to_many::{websocket_handler, NetworkManager};
 use crate::utils::IceCandidate;
 use js_sys::JsString;
 use log::{debug, error, info};
-use wasm_peers_protocol::one_to_many::SignalMessage;
-use wasm_peers_protocol::{SessionId, UserId};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
+use wasm_peers_protocol::one_to_many::SignalMessage;
+use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{
     MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcPeerConnection,
     RtcPeerConnectionIceEvent, WebSocket,

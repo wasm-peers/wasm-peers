@@ -27,8 +27,8 @@ pub mod one_to_many;
 pub mod one_to_one;
 mod utils;
 
-pub use wasm_peers_protocol::{SessionId, UserId};
 pub use utils::ConnectionType;
+pub use wasm_peers_protocol::{SessionId, UserId};
 
 /// Returns a new SessionId instance that can be used to identify a session by signaling server.
 pub fn get_random_session_id() -> SessionId {

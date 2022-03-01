@@ -1,8 +1,8 @@
 use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 use ::log::{debug, error, info};
-use wasm_peers_protocol::one_to_one::SignalMessage;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
+use wasm_peers_protocol::one_to_one::SignalMessage;
 use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit,
     WebSocket,

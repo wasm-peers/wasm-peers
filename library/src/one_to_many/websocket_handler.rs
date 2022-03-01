@@ -7,10 +7,10 @@ use crate::one_to_many::callbacks::{
 use crate::one_to_many::{Connection, NetworkManager};
 use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
 use log::{debug, error, info};
-use wasm_peers_protocol::one_to_many::SignalMessage;
-use wasm_peers_protocol::UserId;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
+use wasm_peers_protocol::one_to_many::SignalMessage;
+use wasm_peers_protocol::UserId;
 use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
 };

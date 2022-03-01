@@ -63,10 +63,10 @@ use crate::one_to_one::callbacks::{
 };
 use crate::utils::{create_peer_connection, ConnectionType};
 use log::debug;
-use wasm_peers_protocol::SessionId;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
+use wasm_peers_protocol::SessionId;
 use web_sys::RtcPeerConnection;
 use web_sys::{RtcDataChannel, WebSocket};
 
@@ -172,20 +172,30 @@ impl NetworkManager {
         Ok(())
     }
 
+    fn datachannel(&self) -> Result<RtcDataChannel, JsValue> {
+        Ok(self
+            .inner
+            .borrow()
+            .data_channel
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("no data channel set on instance yet"))?
+            .clone())
+    }
+
     /// Send message to the other end of the connection.
     /// It might fail if the connection is not yet set up
     /// and thus should only be called after `on_open_callback` triggers.
     /// Otherwise it will result in an error.
     pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
         debug!("server will try to send a message: {:?}", &message);
-        self.inner
-            .borrow()
-            .data_channel
-            .as_ref()
-            .ok_or_else(|| JsValue::from_str("no data channel set on instance yet"))?
-            // this is an ugly fix to the fact, that if you send empty string as message
-            // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-            // message
-            .send_with_str(&format!("x{}", message))
+        // FIXME(tkarwowski): this is an ugly fix to the fact, that if you send empty string as message
+        //  webrtc fails with a cryptic "The operation failed for an operation-specific reason"
+        //  message
+        self.datachannel()?.send_with_str(&format!("x{}", message))
+    }
+
+    /// Same as [NetworkManager::send_message], but allows to send byte array
+    pub fn send_u8_array(&self, message: &[u8]) -> Result<(), JsValue> {
+        self.datachannel()?.send_with_u8_array(message)
     }
 }
