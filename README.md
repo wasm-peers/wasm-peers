@@ -70,18 +70,26 @@ fn main() {
     peer2.start(peer2_on_open, peer2_on_message).unwrap();
 }
 ```
-
 For examples of other topologies check out the [docs](https://docs.rs/wasm-peers/latest/wasm_peers/).
 
-## Authors
-
-Tomasz Karwowski  
-[LinkedIn](https://www.linkedin.com/in/tomek-karwowski/)
+## Roadmap
+- [ ] Add tests
+- [ ] Improve error handling
+- [ ] Introduce alternative API with futures
+- [ ] Add possibility to pass video/audio streams over established connection
 
 ## Version History
 
+* 0.4
+    * MiniServer callbacks don't accept UserId argument now (it'd always be hosts)
+    * Fix documentation tests so that they compile
 * 0.3
     * Initial release to the public
+
+
+## Similar projects
+
+* [matchbox](https://github.com/johanhelsing/matchbox#readme)
 
 ## License
 
@@ -94,6 +102,12 @@ This project is licensed under either of
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as
 defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+## Authors
+
+Tomasz Karwowski  
+[LinkedIn](https://www.linkedin.com/in/tomek-karwowski/)
+
 
 ## Acknowledgments
 
