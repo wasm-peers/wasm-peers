@@ -9,27 +9,26 @@ with [NetworkManager::send_message] method.
 This example shows two peers sending `ping` and `pong` messages to each other.
 
 ```
-use wasm_peers::ConnectionType;
+use wasm_peers::{ConnectionType, SessionId};
 use wasm_peers::one_to_one::NetworkManager;
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
+const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
 let session_id = SessionId::new("some-session-id".to_string());
 let mut server = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id.clone(),
-    ConnectionType::Stun,
+    ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 
 let server_clone = server.clone();
 let server_on_open = move || server_clone.send_message("ping!").unwrap();
 let server_on_message = {
-    let server_received_message = server_received_message.clone();
     move |message| {
         console::log_1(&format!("server received message: {}", message).into());
-        *server_received_message.borrow_mut() = true;
     }
 };
 server.start(server_on_open, server_on_message).unwrap();
@@ -37,17 +36,15 @@ server.start(server_on_open, server_on_message).unwrap();
 let mut client = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id,
-    ConnectionType::Stun,
+    ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 let client_on_open = || { /* do nothing */ };
 let client_clone = client.clone();
 let client_on_message = {
-    let client_received_message = client_received_message.clone();
     move |message| {
         console::log_1(&format!("client received message: {}", message).into());
         client_clone.send_message("pong!").unwrap();
-        *client_received_message.borrow_mut() = true;
     }
 };
 client.start(client_on_open, client_on_message).unwrap();

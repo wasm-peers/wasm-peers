@@ -70,11 +70,11 @@ fn single_message_passes_both_ways() {
             ConnectionType::Local,
         )
         .unwrap();
-        let client_on_open = |_| { /* do nothing */ };
+        let client_on_open = || { /* do nothing */ };
         let client_clone = client.clone();
         let client_on_message = {
             let client_received_message = client_received_message.clone();
-            move |_, message| {
+            move |message| {
                 console::log_1(&format!("client received message: {}", message).into());
                 client_clone.send_message_to_host("pong!").unwrap();
                 *client_received_message.borrow_mut() = true;

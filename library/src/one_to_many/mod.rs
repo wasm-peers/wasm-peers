@@ -25,11 +25,12 @@ use wasm_peers_protocol::SessionId;
 use web_sys::console;
 
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
+const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
 let mut server = MiniServer::new(
     SIGNALING_SERVER_URL,
     SessionId::new("dummy-session-id".to_string()),
-    ConnectionType::Stun,
+    ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 let server_open_connections_count = Rc::new(RefCell::new(0));
@@ -46,7 +47,6 @@ let server_on_open = {
     }
 };
 let server_on_message = {
-    let server_received_message = server_received_message.clone();
     move |user_id, message| {
         console::log_1(
             &format!(
@@ -55,7 +55,6 @@ let server_on_message = {
             )
             .into(),
         );
-        *server_received_message.borrow_mut() = true;
     }
 };
 server.start(server_on_open, server_on_message).unwrap();
@@ -64,17 +63,15 @@ let client_generator = || {
     let mut client = MiniClient::new(
         SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
     )
     .unwrap();
-    let client_on_open = |_| { /* do nothing */ };
+    let client_on_open = || { /* do nothing */ };
     let client_clone = client.clone();
     let client_on_message = {
-        let client_received_message = client_received_message.clone();
-        move |_, message| {
+        move |message| {
             console::log_1(&format!("client received message: {}", message).into());
             client_clone.send_message_to_host("pong!");
-            *client_received_message.borrow_mut() = true;
         }
     };
     client.start(client_on_open, client_on_message).unwrap();

@@ -23,44 +23,38 @@ use web_sys::console;
 
 // there should be a signaling server from accompanying crate listening on this port
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-many";
-
-let opened_connections_count = Rc::new(RefCell::new(0));
-let received_messages_count = Rc::new(RefCell::new(0));
+const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
 let peer_generator = || {
-    let mut server = NetworkManager::new(
+    let mut peer = NetworkManager::new(
         SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Stun,
+        ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
     )
     .unwrap();
 
-    let server_clone = server.clone();
-    let opened_connections_count = opened_connections_count.clone();
-    let server_on_open = {
+    let peer_clone = peer.clone();
+    let peer_on_open = {
         move |user_id| {
-            console::log_1(&format!("connection to user established: {:?}", user_id).into());
-            *opened_connections_count.borrow_mut() += 1;
-            server_clone.send_message(user_id, "ping!");
+            console::log_1(&format!("connection to peer established: {:?}", user_id).into());
+            peer_clone.send_message(user_id, "ping!");
         }
     };
 
-    let server_clone = server.clone();
-    let received_messages_count = received_messages_count.clone();
-    let server_on_message = {
+    let peer_clone = peer.clone();
+    let peer_on_message = {
         move |user_id, message| {
             console::log_1(
                 &format!(
-                    "server received message from client {:?}: {}",
+                    "peer received message from other peer {:?}: {}",
                     user_id, message
                 )
                 .into(),
             );
-            *received_messages_count.borrow_mut() += 1;
-            server_clone.send_message(user_id, "pong!");
+            peer_clone.send_message(user_id, "pong!");
         }
     };
-    server.start(server_on_open, server_on_message).unwrap();
+    peer.start(peer_on_open, peer_on_message).unwrap();
 };
 peer_generator();
 peer_generator();
