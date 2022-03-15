@@ -11,11 +11,16 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: cargo run &
         working-directory: ./signaling-server
-      - run: wasm-pack test --headless --firefox
+      - name: Test on Firefox
+        run: wasm-pack test --headless --firefox
         working-directory: ./library
         env:
           WS_IP_PORT: 127.0.0.1:9001
-      - run: wasm-pack test --headless --chrome
+      - name: Test on Chrome
+        run: wasm-pack test --headless --chrome
         working-directory: ./library
         env:
           WS_IP_PORT: 127.0.0.1:9001
+#      - name: Check docstring compile
+#         this fails with error: Can't skip running doc tests with --no-run
+#         run: cargo +nightly test --doc -Zdoctest-xcompile --no-run

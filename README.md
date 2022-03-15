@@ -108,7 +108,6 @@ defined in the Apache-2.0 license, shall be dual licensed as above, without any 
 Tomasz Karwowski  
 [LinkedIn](https://www.linkedin.com/in/tomek-karwowski/)
 
-
 ## Acknowledgments
 
 These projects helped me grasp WebRTC in Rust:
