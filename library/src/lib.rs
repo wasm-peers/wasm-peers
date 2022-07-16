@@ -19,6 +19,8 @@ and [many-to-many] that creates connection for each pair of peers and allows sen
 */
 
 #[deny(missing_docs)]
+#[warn(clippy::pedantic)]
+
 #[cfg(feature = "many-to-many")]
 pub mod many_to_many;
 #[cfg(feature = "one-to-many")]

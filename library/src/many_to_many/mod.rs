@@ -4,8 +4,8 @@ Library module for implementation of the many-to-many topology of peer communica
 Each peer in session is an equal, with ability to send and receive messages from any other peer.
 Unlike with one-to-many topology, any peer can leave at any time without compromising the network.
 
-To identify peers you should store [UserId] accessible inside `on_open_callback` in some custom structure.
-Then you can use it in [NetworkManager::send_message] to specify exactly which peer should receive the message.
+To identify peers you should store [`UserId`] accessible inside `on_open_callback` in some custom structure.
+Then you can use it in [`NetworkManager::send_message`] to specify exactly which peer should receive the message.
 
 # Example
 
@@ -67,10 +67,10 @@ use crate::ConnectionType;
 use wasm_bindgen::JsValue;
 use wasm_peers_protocol::{SessionId, UserId};
 
-/// Abstraction over WebRTC peer-to-peer connection.
+/// Abstraction over `WebRTC` peer-to-peer connection.
 /// Structure representing equal peer in many-to-many topology.
 ///
-/// WebRTC data channel communication abstracted to a single class.
+/// `WebRTC` data channel communication abstracted to a single class.
 /// All setup is handled internally, you must only provide callbacks
 /// for when the connection opens and for handling incoming messages.
 /// It also provides a method of sending data to the other end of the connection.
@@ -78,7 +78,7 @@ use wasm_peers_protocol::{SessionId, UserId};
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
 /// whose full IP address must be provided.
 ///
-/// Startup flow is divided into two methods [NetworkManager::new] and [NetworkManager::start]
+/// Startup flow is divided into two methods [`NetworkManager::new`] and [`NetworkManager::start`]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
 /// This class is a cloneable pointer to the underlying resource and can be cloned freely.
@@ -109,7 +109,7 @@ impl NetworkManager {
     /// Second part of the setup that begins the actual connection.
     /// Requires specifying a callbacks that are guaranteed to run
     /// when a new connection opens and on each message received.
-    /// It takes [UserId] as an argument which helps identify sending peer.
+    /// It takes [`UserId`] as an argument which helps identify sending peer.
     pub fn start(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
@@ -119,13 +119,17 @@ impl NetworkManager {
     }
 
     /// Sends message over established data channel to a single peer represented by
-    /// the [UserId] returned by signaling server during connection establishment.
+    /// the [`UserId`] returned by signaling server during connection establishment.
+    ///
+    /// # Errors
+    /// This function errors if it's called before datachannel is established,
+    /// or if sending the message via datachannel fails.
     pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
         self.inner.send_message(user_id, message)
     }
 
     /// Convenience method that sends the same message to all connected peers.
     pub fn send_message_to_all(&self, message: &str) {
-        self.inner.send_message_to_all(message)
+        self.inner.send_message_to_all(message);
     }
 }

@@ -36,7 +36,7 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
         while let Some(message) = rx.next().await {
             user_ws_tx
                 .send(message)
-                .unwrap_or_else(|e| eprintln!("websocket send error: {}", e))
+                .unwrap_or_else(|e| error!("websocket send error: {}", e))
                 .await;
         }
     });
