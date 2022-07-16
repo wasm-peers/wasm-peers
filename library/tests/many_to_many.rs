@@ -21,7 +21,7 @@ fn network_manager_starts_successfully() {
         ConnectionType::Local,
     )
     .unwrap();
-    server.start(|_| {}, |_, _| {}).unwrap();
+    server.start(|_| {}, |_, _| {});
 }
 
 #[wasm_bindgen_test]
@@ -62,7 +62,7 @@ fn single_message_passes_between_all() {
                 server_clone.send_message(user_id, "pong!").unwrap();
             }
         };
-        server.start(server_on_open, server_on_message).unwrap();
+        server.start(server_on_open, server_on_message);
     };
     peer_generator();
     peer_generator();

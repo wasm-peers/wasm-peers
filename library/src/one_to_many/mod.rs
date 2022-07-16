@@ -57,7 +57,7 @@ let server_on_message = {
         );
     }
 };
-server.start(server_on_open, server_on_message).unwrap();
+server.start(server_on_open, server_on_message);
 
 let client_generator = || {
     let mut client = MiniClient::new(
@@ -74,7 +74,7 @@ let client_generator = || {
             client_clone.send_message_to_host("pong!");
         }
     };
-    client.start(client_on_open, client_on_message).unwrap();
+    client.start(client_on_open, client_on_message);
 };
 client_generator();
 client_generator();
@@ -147,7 +147,7 @@ impl NetworkManager {
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
-    ) -> Result<(), JsValue> {
+    ) {
         let websocket = self.inner.borrow().websocket.clone();
         let session_id = self.inner.borrow().session_id.clone();
         let is_host = self.inner.borrow().is_host;
@@ -160,8 +160,6 @@ impl NetworkManager {
             on_message_callback,
             is_host,
         );
-
-        Ok(())
     }
 
     pub(crate) fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
@@ -241,8 +239,8 @@ impl MiniServer {
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
-    ) -> Result<(), JsValue> {
-        self.inner.start(on_open_callback, on_message_callback)
+    ) {
+        self.inner.start(on_open_callback, on_message_callback);
     }
 
     /// Sends message over established data channel with a single client-peer represented by
@@ -281,10 +279,10 @@ impl MiniClient {
         &mut self,
         mut on_open_callback: impl FnMut() + Clone + 'static,
         mut on_message_callback: impl FnMut(String) + Clone + 'static,
-    ) -> Result<(), JsValue> {
+    ) {
         let on_open_callback = move |_| on_open_callback();
         let on_message_callback = move |_, message| on_message_callback(message);
-        self.inner.start(on_open_callback, on_message_callback)
+        self.inner.start(on_open_callback, on_message_callback);
     }
 
     /// Way of communicating with peer-server

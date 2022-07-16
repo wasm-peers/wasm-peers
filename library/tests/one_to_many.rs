@@ -21,7 +21,7 @@ fn network_manager_starts_successfully() {
         ConnectionType::Local,
     )
     .unwrap();
-    server.start(|_| {}, |_, _| {}).unwrap();
+    server.start(|_| {}, |_, _| {});
 }
 
 #[wasm_bindgen_test]
@@ -61,7 +61,7 @@ fn single_message_passes_both_ways() {
             *server_received_message.borrow_mut() = true;
         }
     };
-    server.start(server_on_open, server_on_message).unwrap();
+    server.start(server_on_open, server_on_message);
 
     let client_generator = || {
         let mut client = MiniClient::new(
@@ -80,7 +80,7 @@ fn single_message_passes_both_ways() {
                 *client_received_message.borrow_mut() = true;
             }
         };
-        client.start(client_on_open, client_on_message).unwrap();
+        client.start(client_on_open, client_on_message);
     };
     client_generator();
     client_generator();
