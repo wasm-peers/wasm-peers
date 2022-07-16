@@ -54,7 +54,7 @@ let peer_generator = || {
             peer_clone.send_message(user_id, "pong!");
         }
     };
-    peer.start(peer_on_open, peer_on_message).unwrap();
+    peer.start(peer_on_open, peer_on_message);
 };
 peer_generator();
 peer_generator();
@@ -91,6 +91,9 @@ impl NetworkManager {
     /// Creates an instance with all resources required to create a connections to other peers.
     /// Requires an IP address of an signaling server instance,
     /// session id by which it will identify connecting other peers and type of connection.
+    ///
+    /// # Errors
+    /// This function errors if opening a `WebSocket` connection to URL provide by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -114,8 +117,8 @@ impl NetworkManager {
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
-    ) -> Result<(), JsValue> {
-        self.inner.start(on_open_callback, on_message_callback)
+    ) {
+        self.inner.start(on_open_callback, on_message_callback);
     }
 
     /// Sends message over established data channel to a single peer represented by

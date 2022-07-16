@@ -90,19 +90,17 @@ pub(crate) fn set_websocket_on_message(
 
 /// once websocket is open, send a request to start or join a session
 pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_host: bool) {
-    {
-        let websocket_clone = websocket.clone();
-        let onopen_callback = Closure::wrap(Box::new(move |_| {
-            let signal_message = SignalMessage::SessionJoin(session_id.clone(), is_host);
-            let signal_message = serde_json_wasm::to_string(&signal_message)
-                .expect("failed serializing SignalMessage");
-            websocket_clone
-                .send_with_str(&signal_message)
-                .expect("failed sending start-or-join message to the websocket");
-        }) as Box<dyn FnMut(JsValue)>);
-        websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-        onopen_callback.forget();
-    }
+    let websocket_clone = websocket.clone();
+    let onopen_callback = Closure::wrap(Box::new(move |_| {
+        let signal_message = SignalMessage::SessionJoin(session_id.clone(), is_host);
+        let signal_message =
+            serde_json_wasm::to_string(&signal_message).expect("failed serializing SignalMessage");
+        websocket_clone
+            .send_with_str(&signal_message)
+            .expect("failed sending start-or-join message to the websocket");
+    }) as Box<dyn FnMut(JsValue)>);
+    websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+    onopen_callback.forget();
 }
 
 pub(crate) fn set_peer_connection_on_negotiation_needed(peer_connection: &RtcPeerConnection) {
