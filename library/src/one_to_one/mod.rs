@@ -2,7 +2,7 @@
 Library module for one-to-one network topology in simple tunnel connection.
 
 After connection is established both peers are treated equally and have an opportunity to send messages
-with [::] method.
+with [`NetworkManager::send_message`] method.
 
 # Example
 
@@ -17,37 +17,37 @@ const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
 const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
 let session_id = SessionId::new("some-session-id".to_string());
-let mut server = NetworkManager::new(
+let mut peer1 = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id.clone(),
     ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 
-let server_clone = server.clone();
-let server_on_open = move || server_clone.send_message("ping!").unwrap();
-let server_on_message = {
+let peer1_clone = peer1.clone();
+let peer1_on_open = move || peer1_clone.send_message("ping!").unwrap();
+let peer1_on_message = {
     move |message| {
-        console::log_1(&format!("server received message: {}", message).into());
+        console::log_1(&format!("peer1 received message: {}", message).into());
     }
 };
-server.start(server_on_open, server_on_message).unwrap();
+peer1.start(peer1_on_open, peer1_on_message).unwrap();
 
-let mut client = NetworkManager::new(
+let mut peer2 = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id,
     ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
-let client_on_open = || { /* do nothing */ };
-let client_clone = client.clone();
-let client_on_message = {
+let peer2_on_open = || { /* do nothing */ };
+let peer2_clone = peer2.clone();
+let peer2_on_message = {
     move |message| {
-        console::log_1(&format!("client received message: {}", message).into());
-        client_clone.send_message("pong!").unwrap();
+        console::log_1(&format!("peer2 received message: {}", message).into());
+        peer2_clone.send_message("pong!").unwrap();
     }
 };
-client.start(client_on_open, client_on_message).unwrap();
+peer2.start(peer2_on_open, peer2_on_message).unwrap();
 ```
 */
 
@@ -90,7 +90,7 @@ pub(crate) struct NetworkManagerInner {
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
 /// whose full  address must be provided.
 ///
-/// Start-up flow is divided into two methods [::new] and [::start]
+/// Start-up flow is divided into two methods [`NetworkManager::new`] and [`NetworkManager::start`]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
 /// This class is a  pointer to the underlying resource and can be cloned freely.
@@ -192,7 +192,7 @@ impl NetworkManager {
         self.datachannel()?.send_with_str(&format!("x{}", message))
     }
 
-    /// Same as [::], but allows to send byte array
+    /// Same as [`NetworkManager::send_message`], but allows to send byte array
     pub fn send_u8_array(&self, message: &[u8]) -> Result<(), JsValue> {
         self.datachannel()?.send_with_u8_array(message)
     }

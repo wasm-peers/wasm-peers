@@ -18,10 +18,10 @@ run *FLAGS:
 
 pre-commit:
     @just fmt
-    cargo spellcheck fix
-    cargo clippy
-    cargo clippy --tests
+    cargo clippy --tests --examples
+    cargo doc --no-deps --all-features
     @just test
+    cargo spellcheck fix
 
 coverage *FLAGS:
     cargo llvm-cov {{FLAGS}} --open
