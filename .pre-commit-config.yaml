@@ -1,0 +1,28 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+  - id: check-toml
+  - id: check-yaml
+  - id: pretty-format-json
+  - id: check-added-large-files
+  - id: no-commit-to-branch
+    args: [--branch, main, --branch, staging]
+
+- repo: https://github.com/matthorgan/pre-commit-conventional-commits
+  rev: master
+  hooks:
+  - id: conventional-commit-check
+    stages:
+    - commit-msg
+
+- repo: https://github.com/doublify/pre-commit-rust
+  rev: v1.0
+  hooks:
+  - id: fmt
+  - id: cargo-check
+  - id: clippy
