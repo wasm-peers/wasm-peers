@@ -1,14 +1,14 @@
 /*!
 Library module for the one-to-many topology in client-server architecture.
-There can be exactly one instance of [MiniServer] and arbitrary number of [MiniClient]'s
+There can be exactly one instance of [`MiniServer`] and arbitrary number of [`MiniClient`]'s
 connected to the same session.
 
-A RtcPeerConnection with an accompanying RtcDataChannel will be established between the [MiniServer]
-and each of the [MiniClient]'s. [MiniServer] can decide whether to send a message to a single peer,
-identified by [UserId] returned by signaling server during connection establishment method,
-with [MiniServer::send_message], or to fire to all clients with [MiniServer::send_message_to_all].
+A `RtcPeerConnection` with an accompanying `RtcDataChannel` will be established between the [`MiniServer`]
+and each of the [`MiniClient`]'s. [`MiniServer`] can decide whether to send a message to a single peer,
+identified by [`UserId`] returned by signaling server during connection establishment method,
+with [::], or to fire to all clients with [::send_message_to_all].
 
-[MiniClient] only has an option to message the host with [MiniClient::send_message_to_host].
+[`MiniClient`] only has an option to message the host with [::send_message_to_host].
 
 # Example
 
@@ -199,21 +199,21 @@ impl NetworkManager {
     }
 }
 
-/// Abstraction over WebRTC peer-to-peer connection.
+/// Abstraction over `WebRTC` peer-to-peer connection.
 /// Structure representing server in client-server topology.
 ///
-/// WebRTC data channel communication abstracted to a single class.
+/// `WebRTC` data channel communication abstracted to a single class.
 /// All setup is handled internally, you must only provide callbacks
 /// for when the connection opens and for handling incoming messages.
 /// It also provides a method of sending data to the other end of the connection.
 ///
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
-/// whose full IP address must be provided.
+/// whose full  address must be provided.
 ///
-/// Startup flow is divided into two methods [MiniServer::new] and [MiniServer::start]
+/// Start-up flow is divided into two methods [::new] and [::start]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
-/// This class is a cloneable pointer to the underlying resource and can be cloned freely.
+/// This class is a  pointer to the underlying resource and can be cloned freely.
 #[derive(Debug, Clone)]
 pub struct MiniServer {
     inner: NetworkManager,
@@ -221,7 +221,7 @@ pub struct MiniServer {
 
 impl MiniServer {
     /// Creates an instance with all resources required to create a connections to client-peers.
-    /// Requires an IP address of an signaling server instance,
+    /// Requires an  address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
     pub fn new(
         signaling_server_url: &str,
@@ -236,7 +236,7 @@ impl MiniServer {
     /// Second part of the setup that begins the actual connection.
     /// Requires specifying a callbacks that are guaranteed to run
     /// when the connection opens and on each message received.
-    /// It takes [UserId] as an argument which helps identify which client-peer.
+    /// It takes [`UserId`] as an argument which helps identify which client-peer.
     pub fn start(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
@@ -246,7 +246,7 @@ impl MiniServer {
     }
 
     /// Sends message over established data channel with a single client-peer represented by
-    /// the [UserId] returned by signaling server during connection establishment.
+    /// the [`UserId`] returned by signaling server during connection establishment.
     pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
         self.inner.send_message(user_id, message)
     }
@@ -257,15 +257,15 @@ impl MiniServer {
     }
 }
 
-/// Abstraction over WebRTC peer-to-peer connection.
-/// Same as [MiniServer], but representing clients in client-server topology.
+/// Abstraction over `WebRTC` peer-to-peer connection.
+/// Same as [`MiniServer`], but representing clients in client-server topology.
 #[derive(Debug, Clone)]
 pub struct MiniClient {
     inner: NetworkManager,
 }
 
 impl MiniClient {
-    /// Same as [MiniServer::new]
+    /// Same as [::new]
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -276,7 +276,7 @@ impl MiniClient {
         })
     }
 
-    /// Same as [MiniServer::start], but callbacks don't take UserId argument, as it will always be host.
+    /// Same as [::start], but callbacks don't take `UserId` argument, as it will always be host.
     pub fn start(
         &mut self,
         mut on_open_callback: impl FnMut() + Clone + 'static,

@@ -89,7 +89,7 @@ pub(crate) fn set_websocket_on_message(
     onmessage_callback.forget();
 }
 
-/// once websocket is open, send a request to start or join a session
+/// once web socket is open, send a request to start or join a session
 pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_host: bool) {
     let websocket_clone = websocket.clone();
     let onopen_callback = Closure::wrap(Box::new(move |_| {

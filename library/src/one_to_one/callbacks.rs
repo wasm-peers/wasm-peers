@@ -70,7 +70,7 @@ pub(crate) fn set_websocket_on_message(websocket: &WebSocket, peer_connection: R
     }
 }
 
-/// once websocket is open, send a request to start or join a session
+/// once web socket is open, send a request to start or join a session
 pub(crate) fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId) {
     {
         let websocket_clone = websocket.clone();

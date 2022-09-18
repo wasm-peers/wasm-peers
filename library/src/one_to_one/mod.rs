@@ -2,7 +2,7 @@
 Library module for one-to-one network topology in simple tunnel connection.
 
 After connection is established both peers are treated equally and have an opportunity to send messages
-with [NetworkManager::send_message] method.
+with [::] method.
 
 # Example
 
@@ -79,21 +79,21 @@ pub(crate) struct NetworkManagerInner {
     pub(crate) data_channel: Option<RtcDataChannel>,
 }
 
-/// Abstraction over WebRTC peer-to-peer connection.
+/// Abstraction over `WebRTC` peer-to-peer connection.
 /// Structure representing one of two equal peers.
 ///
-/// WebRTC data channel communication abstracted to a single class.
+/// `WebRTC` data channel communication abstracted to a single class.
 /// All setup is handled internally, you must only provide callbacks
 /// for when the connection opens and for handling incoming messages.
 /// It also provides a method of sending data to the other end of the connection.
 ///
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
-/// whose full IP address must be provided.
+/// whose full  address must be provided.
 ///
-/// Startup flow is divided into two methods [NetworkManager::new] and [NetworkManager::start]
+/// Start-up flow is divided into two methods [::new] and [::start]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
-/// This class is a cloneable pointer to the underlying resource and can be cloned freely.
+/// This class is a  pointer to the underlying resource and can be cloned freely.
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
     pub(crate) inner: Rc<RefCell<NetworkManagerInner>>,
@@ -101,7 +101,7 @@ pub struct NetworkManager {
 
 impl NetworkManager {
     /// Creates an instance with all resources required to create a connection.
-    /// Requires an IP address of an signaling server instance,
+    /// Requires an  address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
     pub fn new(
         signaling_server_url: &str,
@@ -192,7 +192,7 @@ impl NetworkManager {
         self.datachannel()?.send_with_str(&format!("x{}", message))
     }
 
-    /// Same as [NetworkManager::send_message], but allows to send byte array
+    /// Same as [::], but allows to send byte array
     pub fn send_u8_array(&self, message: &[u8]) -> Result<(), JsValue> {
         self.datachannel()?.send_with_u8_array(message)
     }
