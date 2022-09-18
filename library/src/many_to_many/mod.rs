@@ -61,10 +61,11 @@ peer_generator();
 ```
  */
 
-use crate::one_to_many::NetworkManager as OneToManyNetworkManager;
-use crate::ConnectionType;
 use wasm_bindgen::JsValue;
 use wasm_peers_protocol::{SessionId, UserId};
+
+use crate::one_to_many::NetworkManager as OneToManyNetworkManager;
+use crate::ConnectionType;
 
 /// Abstraction over `WebRTC` peer-to-peer connection.
 /// Structure representing equal peer in many-to-many topology.

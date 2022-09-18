@@ -84,14 +84,16 @@ client_generator();
 mod callbacks;
 mod websocket_handler;
 
-use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
-use crate::ConnectionType;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
 use wasm_bindgen::JsValue;
 use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
+
+use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
+use crate::ConnectionType;
 
 #[derive(Debug, Clone)]
 struct Connection {

@@ -4,6 +4,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use wasm_peers::many_to_many::NetworkManager;
 use wasm_peers::{ConnectionType, SessionId};

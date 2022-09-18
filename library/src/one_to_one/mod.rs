@@ -51,6 +51,14 @@ client.start(client_on_open, client_on_message).unwrap();
 ```
 */
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use log::debug;
+use wasm_bindgen::JsValue;
+use wasm_peers_protocol::SessionId;
+use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
+
 use crate::one_to_one::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
     set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
@@ -59,13 +67,6 @@ use crate::one_to_one::callbacks::{
     set_websocket_on_message, set_websocket_on_open,
 };
 use crate::utils::{create_peer_connection, ConnectionType};
-use log::debug;
-use std::cell::RefCell;
-use std::rc::Rc;
-use wasm_bindgen::JsValue;
-use wasm_peers_protocol::SessionId;
-use web_sys::RtcPeerConnection;
-use web_sys::{RtcDataChannel, WebSocket};
 
 mod callbacks;
 mod websocket_handler;

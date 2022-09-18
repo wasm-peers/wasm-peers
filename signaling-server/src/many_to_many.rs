@@ -7,7 +7,6 @@ use log::{error, info, warn};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
-
 use wasm_peers_protocol::one_to_many::SignalMessage;
 use wasm_peers_protocol::{SessionId, UserId};
 

@@ -3,8 +3,9 @@ Signaling messages exchanged between used by MiniServer, MiniClient and signalin
 to facilitate communication in client-server topology.
  */
 
-use crate::{IsHost, SessionId};
 use serde::{Deserialize, Serialize};
+
+use crate::{IsHost, SessionId};
 
 /// Enum consisting of two main categories are messages used to setup signaling session
 /// and messages used to setup WebRTC connection afterwards.

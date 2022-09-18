@@ -1,5 +1,3 @@
-use crate::one_to_one::{websocket_handler, NetworkManager};
-use crate::utils::IceCandidate;
 use js_sys::JsString;
 use log::{debug, error, info};
 use wasm_bindgen::closure::Closure;
@@ -10,6 +8,9 @@ use web_sys::{
     MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcPeerConnection,
     RtcPeerConnectionIceEvent, WebSocket,
 };
+
+use crate::one_to_one::{websocket_handler, NetworkManager};
+use crate::utils::IceCandidate;
 
 /// also calls:
 /// * set_data_channel_on_open
