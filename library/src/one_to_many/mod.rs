@@ -3,12 +3,13 @@ Library module for the one-to-many topology in client-server architecture.
 There can be exactly one instance of [`MiniServer`] and arbitrary number of [`MiniClient`]'s
 connected to the same session.
 
-A `RtcPeerConnection` with an accompanying `RtcDataChannel` will be established between the [`MiniServer`]
-and each of the [`MiniClient`]'s. [`MiniServer`] can decide whether to send a message to a single peer,
+A [`RtcPeerConnection`] with an accompanying [`RtcDataChannel`] will be established between the [`MiniServer`]
+and each of the [`MiniClient`]'s.
+[`MiniServer`] can decide whether to send a message to a single peer,
 identified by [`UserId`] returned by signaling server during connection establishment method,
-with [::], or to fire to all clients with [::send_message_to_all].
+with [`MiniServer::send_message`], or to fire to all clients with [`MiniServer::send_message_to_all`].
 
-[`MiniClient`] only has an option to message the host with [::send_message_to_host].
+[`MiniClient`] only has an option to message the host with [`MiniClient::send_message_to_host`].
 
 # Example
 
@@ -210,7 +211,7 @@ impl NetworkManager {
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
 /// whose full  address must be provided.
 ///
-/// Start-up flow is divided into two methods [::new] and [::start]
+/// Start-up flow is divided into two methods [`MiniServer::new`] and [`MiniServer::start`]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
 /// This class is a  pointer to the underlying resource and can be cloned freely.
@@ -265,7 +266,7 @@ pub struct MiniClient {
 }
 
 impl MiniClient {
-    /// Same as [::new]
+    /// Same as [`MiniServer::new`]
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -276,7 +277,7 @@ impl MiniClient {
         })
     }
 
-    /// Same as [::start], but callbacks don't take `UserId` argument, as it will always be host.
+    /// Same as [`MiniServer::start`], but callbacks don't take `UserId` argument, as it will always be host.
     pub fn start(
         &mut self,
         mut on_open_callback: impl FnMut() + Clone + 'static,
