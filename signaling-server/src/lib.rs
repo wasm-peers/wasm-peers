@@ -1,7 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 // clippy WARN level lints
 #![warn(
-    missing_docs,
+    // missing_docs,
     clippy::cargo,
     clippy::pedantic,
     clippy::nursery,
@@ -10,7 +10,7 @@
     clippy::integer_division,
     clippy::large_include_file,
     clippy::map_err_ignore,
-    clippy::missing_docs_in_private_items,
+    // clippy::missing_docs_in_private_items,
     clippy::panic,
     clippy::todo,
     clippy::undocumented_unsafe_blocks,
@@ -28,7 +28,6 @@
     clippy::create_dir,
     clippy::default_union_representation,
     clippy::deref_by_slicing,
-    clippy::else_if_without_else,
     clippy::empty_drop,
     clippy::empty_structs_with_brackets,
     clippy::exit,
@@ -62,6 +61,9 @@
     clippy::verbose_file_reads
 )]
 
+mod error;
 pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;
+
+pub use error::{Error, Result};

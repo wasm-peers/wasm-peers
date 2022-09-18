@@ -20,5 +20,6 @@ tokio-stream = "0.1.8"
 warp = "0.3.2"
 simplelog = "0.8.0"
 log = "0.4.8"
+anyhow = "1"
 
 wasm-peers-protocol = { path = "../protocol", version = "0.3" }

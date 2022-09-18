@@ -9,8 +9,8 @@ use web_sys::{
 
 use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 
-/// Basically a state automata spread across host, client and signaling server,
-/// handling each step in session and then WebRTC setup.
+/// Basically a state  spread across host, client and signaling server,
+/// handling each step in session and then `WebRTC` setup.
 pub(crate) async fn handle_websocket_message(
     message: SignalMessage,
     peer_connection: RtcPeerConnection,

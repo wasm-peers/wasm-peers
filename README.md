@@ -6,7 +6,7 @@ This crate provides an easy-to-use wrapper around WebRTC and DataChannels for a 
 
 ## Overview
 
-As creator of agar.io famously stated [WebRTC is hard](https://news.ycombinator.com/item?id=13264952).
+As creator of [agar.io](https://agar.io) famously stated [WebRTC is hard](https://news.ycombinator.com/item?id=13264952).
 This library aims to help, by abstracting away all the setup, and providing a simple way to send
 and receive messages over the data channel.
 
@@ -105,7 +105,7 @@ defined in the Apache-2.0 license, shall be dual licensed as above, without any 
 
 ## Authors
 
-Tomasz Karwowski  
+Tomasz Karwowski
 [LinkedIn](https://www.linkedin.com/in/tomek-karwowski/)
 
 ## Acknowledgments

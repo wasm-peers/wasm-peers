@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use log::{error, info, warn};
 use tokio::sync::{mpsc, RwLock};
@@ -49,7 +50,9 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
             }
         };
 
-        user_message(user_id, msg, &connections, &sessions).await;
+        if let Err(err) = user_message(user_id, msg, &connections, &sessions).await {
+            error!("error while handling user message: {}", err);
+        }
     }
 
     eprintln!("user disconnected: {:?}", user_id);
@@ -61,7 +64,7 @@ async fn user_message(
     msg: Message,
     connections: &Connections,
     sessions: &Sessions,
-) {
+) -> crate::Result<()> {
     if let Ok(msg) = msg.to_str() {
         match serde_json::from_str::<SignalMessage>(msg) {
             Ok(request) => {
@@ -82,7 +85,7 @@ async fn user_message(
                                     .expect("host not in connections");
                                 let host_response =
                                     SignalMessage::SessionReady(session_id.clone(), *client_id);
-                                let host_response = serde_json::to_string(&host_response).unwrap();
+                                let host_response = serde_json::to_string(&host_response)?;
                                 host_tx
                                     .send(Message::text(&host_response))
                                     .expect("failed to send SessionReady message to host");
@@ -93,10 +96,10 @@ async fn user_message(
                     // pass offer to the other user in session without changing anything
                     SignalMessage::SdpOffer(session_id, recipient_id, offer) => {
                         let response = SignalMessage::SdpOffer(session_id, sender_id, offer);
-                        let response = serde_json::to_string(&response).unwrap();
+                        let response = serde_json::to_string(&response)?;
                         let connections_reader = connections.read().await;
                         if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::text(response)).unwrap();
+                            recipient_tx.send(Message::text(response))?;
                         } else {
                             warn!("tried to send offer to non existing user");
                         }
@@ -104,10 +107,10 @@ async fn user_message(
                     // pass answer to the other user in session without changing anything
                     SignalMessage::SdpAnswer(session_id, recipient_id, answer) => {
                         let response = SignalMessage::SdpAnswer(session_id, sender_id, answer);
-                        let response = serde_json::to_string(&response).unwrap();
+                        let response = serde_json::to_string(&response)?;
                         let connections_reader = connections.read().await;
                         if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::text(response)).unwrap();
+                            recipient_tx.send(Message::text(response))?;
                         } else {
                             warn!("tried to send offer to non existing user");
                         }
@@ -115,11 +118,13 @@ async fn user_message(
                     SignalMessage::IceCandidate(session_id, recipient_id, candidate) => {
                         let response =
                             SignalMessage::IceCandidate(session_id, sender_id, candidate);
-                        let response = serde_json::to_string(&response).unwrap();
+                        let response = serde_json::to_string(&response)?;
                         let connections_reader = connections.read().await;
-                        let recipient_tx = connections_reader.get(&recipient_id).unwrap();
+                        let recipient_tx = connections_reader
+                            .get(&recipient_id)
+                            .ok_or_else(|| anyhow!("no sender for given id"))?;
 
-                        recipient_tx.send(Message::text(response)).unwrap();
+                        recipient_tx.send(Message::text(response))?;
                     }
                     _ => {}
                 }
@@ -129,6 +134,7 @@ async fn user_message(
             }
         }
     }
+    Ok(())
 }
 
 async fn user_disconnected(user_id: UserId, connections: &Connections, sessions: &Sessions) {

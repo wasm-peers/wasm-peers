@@ -21,7 +21,7 @@ pub mod one_to_one;
 pub struct SessionId(String);
 
 impl SessionId {
-    /// Wrap String into a SessionId struct
+    /// Wrap String into a `SessionId` `struct`
     pub fn new(inner: String) -> Self {
         SessionId(inner)
     }
@@ -51,12 +51,12 @@ impl Display for SessionId {
 }
 
 /// Unique identifier of each peer connected to signaling server
-/// useful when communicating in one-to-many and many-to-many topologies.
+/// useful when communicating in one-to-many and many-to-many .
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct UserId(usize);
 
 impl UserId {
-    /// Wrap usize into a UserId struct
+    /// Wrap `usize` into a `UserId` `struct`
     pub fn new(inner: usize) -> Self {
         UserId(inner)
     }

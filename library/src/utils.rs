@@ -39,7 +39,7 @@ pub(crate) fn create_peer_connection(
 
                 Reflect::set(&server_entry, &"urls".into(), &urls.into())?;
 
-                ice_servers.push(&*server_entry);
+                ice_servers.push(&server_entry);
             }
 
             let mut rtc_configuration = RtcConfiguration::new();
@@ -59,7 +59,7 @@ pub(crate) fn create_peer_connection(
 
                 Reflect::set(&stun_server_entry, &"urls".into(), &stun_urls.into())?;
 
-                ice_servers.push(&*stun_server_entry);
+                ice_servers.push(&stun_server_entry);
             }
             {
                 let turn_server_entry = Object::new();
@@ -68,7 +68,7 @@ pub(crate) fn create_peer_connection(
                 Reflect::set(&turn_server_entry, &"username".into(), &username.into())?;
                 Reflect::set(&turn_server_entry, &"credential".into(), &credential.into())?;
 
-                ice_servers.push(&*turn_server_entry);
+                ice_servers.push(&turn_server_entry);
             }
 
             let mut rtc_configuration = RtcConfiguration::new();

@@ -76,12 +76,12 @@ use crate::ConnectionType;
 /// It also provides a method of sending data to the other end of the connection.
 ///
 /// Only works with [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/) instance,
-/// whose full IP address must be provided.
+/// whose full  address must be provided.
 ///
-/// Startup flow is divided into two methods [`NetworkManager::new`] and [`NetworkManager::start`]
+/// Start-up flow is divided into two methods [`NetworkManager::new`] and [`NetworkManager::start`]
 /// to allow possibility of referring to network manger itself from the callbacks.
 ///
-/// This class is a cloneable pointer to the underlying resource and can be cloned freely.
+/// This class is a  pointer to the underlying resource and can be cloned freely.
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
     inner: OneToManyNetworkManager,
@@ -89,7 +89,7 @@ pub struct NetworkManager {
 
 impl NetworkManager {
     /// Creates an instance with all resources required to create a connections to other peers.
-    /// Requires an IP address of an signaling server instance,
+    /// Requires an  address of an signaling server instance,
     /// session id by which it will identify connecting other peers and type of connection.
     ///
     /// # Errors
@@ -125,8 +125,8 @@ impl NetworkManager {
     /// the [`UserId`] returned by signaling server during connection establishment.
     ///
     /// # Errors
-    /// This function errors if it's called before datachannel is established,
-    /// or if sending the message via datachannel fails.
+    /// This function errors if it's called before data channel is established,
+    /// or if sending the message via data channel fails.
     pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
         self.inner.send_message(user_id, message)
     }

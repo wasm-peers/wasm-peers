@@ -16,8 +16,8 @@ use crate::one_to_many::callbacks::{
 use crate::one_to_many::{Connection, NetworkManager};
 use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
 
-/// Basically a state automata spread across host, client and signaling server
-/// handling each step in session and then WebRTC setup.
+/// Basically a finite state machine spread across host, client and signaling server
+/// handling each step in session and then `WebRTC` setup.
 pub(crate) async fn handle_websocket_message(
     network_manager: NetworkManager,
     message: SignalMessage,
