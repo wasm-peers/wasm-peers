@@ -3,13 +3,19 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 
 use log::LevelFilter;
-use simplelog::{Config, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use warp::Filter;
 use wasm_peers_signaling_server::{many_to_many, one_to_many, one_to_one};
 
 #[tokio::main]
 async fn main() {
-    TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed).unwrap();
+    TermLogger::init(
+        LevelFilter::Debug,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
 
     let one_to_one_signaling = {
         let connections = one_to_one::Connections::default();
