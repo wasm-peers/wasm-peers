@@ -5,10 +5,11 @@ and [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/la
 
 #![deny(missing_docs)]
 
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
+
+use serde::{Deserialize, Serialize};
 
 pub mod many_to_many;
 pub mod one_to_many;

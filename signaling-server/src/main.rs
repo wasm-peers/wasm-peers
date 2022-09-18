@@ -1,11 +1,10 @@
-use log::LevelFilter;
-use simplelog::{Config, TermLogger, TerminalMode};
 use std::env;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
+use log::LevelFilter;
+use simplelog::{Config, TermLogger, TerminalMode};
 use warp::Filter;
-
 use wasm_peers_signaling_server::{many_to_many, one_to_many, one_to_one};
 
 #[tokio::main]

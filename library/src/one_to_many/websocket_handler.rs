@@ -1,11 +1,3 @@
-use crate::one_to_many::callbacks::{
-    set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
-    set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
-    set_peer_connection_on_ice_connection_state_change,
-    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
-};
-use crate::one_to_many::{Connection, NetworkManager};
-use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
 use log::{debug, error, info};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
@@ -14,6 +6,15 @@ use wasm_peers_protocol::UserId;
 use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
 };
+
+use crate::one_to_many::callbacks::{
+    set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
+    set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
+    set_peer_connection_on_ice_connection_state_change,
+    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
+};
+use crate::one_to_many::{Connection, NetworkManager};
+use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
 
 /// Basically a state automata spread across host, client and signaling server
 /// handling each step in session and then WebRTC setup.

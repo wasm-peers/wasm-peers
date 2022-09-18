@@ -1,4 +1,3 @@
-use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 use ::log::{debug, error, info};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
@@ -7,6 +6,8 @@ use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit,
     WebSocket,
 };
+
+use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 
 /// Basically a state automata spread across host, client and signaling server,
 /// handling each step in session and then WebRTC setup.

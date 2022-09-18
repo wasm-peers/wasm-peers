@@ -8,7 +8,6 @@ use log::{error, info, warn};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
-
 use wasm_peers_protocol::one_to_one::SignalMessage;
 use wasm_peers_protocol::{SessionId, UserId};
 
@@ -107,7 +106,11 @@ async fn user_message(
                         match sessions.write().await.get_mut(&session_id) {
                             Some(session) => {
                                 if session.offer_received {
-                                    warn!("offer already sent by the the peer, ignoring the second offer: {:?}", session_id);
+                                    warn!(
+                                        "offer already sent by the the peer, ignoring the second \
+                                         offer: {:?}",
+                                        session_id
+                                    );
                                 } else {
                                     session.offer_received = true;
                                 }

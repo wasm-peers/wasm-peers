@@ -2,8 +2,7 @@ use js_sys::{Array, Object, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{RtcConfiguration, RtcPeerConnection};
-use web_sys::{RtcSdpType, RtcSessionDescriptionInit};
+use web_sys::{RtcConfiguration, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct IceCandidate {
@@ -130,9 +129,10 @@ pub(crate) async fn create_sdp_answer(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
     use web_sys::{RtcIceConnectionState, RtcIceGatheringState};
+
+    use super::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
