@@ -20,7 +20,7 @@ let session_id = SessionId::new("some-session-id".to_string());
 let mut peer1 = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id.clone(),
-    ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
+    &ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 
@@ -36,7 +36,7 @@ peer1.start(peer1_on_open, peer1_on_message).unwrap();
 let mut peer2 = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id,
-    ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
+    &ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
 let peer2_on_open = || { /* do nothing */ };
@@ -54,29 +54,31 @@ peer2.start(peer2_on_open, peer2_on_message).unwrap();
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use anyhow::anyhow;
 use log::debug;
-use wasm_bindgen::JsValue;
 use wasm_peers_protocol::SessionId;
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
 
 use crate::one_to_one::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
     set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
-    set_peer_connection_on_ice_connection_state_change,
-    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
-    set_websocket_on_message, set_websocket_on_open,
+    set_peer_connection_on_ice_connection_state_change, set_websocket_on_message,
+    set_websocket_on_open,
 };
-use crate::utils::{create_peer_connection, ConnectionType};
+use crate::utils::{
+    create_peer_connection, set_peer_connection_on_ice_gathering_state_change,
+    set_peer_connection_on_negotiation_needed, ConnectionType,
+};
 
 mod callbacks;
 mod websocket_handler;
 
 #[derive(Debug, Clone)]
-pub(crate) struct NetworkManagerInner {
+pub struct NetworkManagerInner {
     session_id: SessionId,
     websocket: WebSocket,
     peer_connection: RtcPeerConnection,
-    pub(crate) data_channel: Option<RtcDataChannel>,
+    pub data_channel: Option<RtcDataChannel>,
 }
 
 /// Abstraction over `WebRTC` peer-to-peer connection.
@@ -96,7 +98,7 @@ pub(crate) struct NetworkManagerInner {
 /// This class is a  pointer to the underlying resource and can be cloned freely.
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
-    pub(crate) inner: Rc<RefCell<NetworkManagerInner>>,
+    pub inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
@@ -106,14 +108,20 @@ impl NetworkManager {
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
-        connection_type: ConnectionType,
-    ) -> Result<Self, JsValue> {
-        let peer_connection = create_peer_connection(&connection_type)?;
+        connection_type: &ConnectionType,
+    ) -> crate::Result<Self> {
+        let peer_connection = create_peer_connection(connection_type)?;
 
-        let websocket = WebSocket::new(signaling_server_url)?;
+        let websocket = WebSocket::new(signaling_server_url).map_err(|err| {
+            anyhow!(
+                "failed to create connection with signaling server on {}: {:?}",
+                signaling_server_url,
+                err
+            )
+        })?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
-        Ok(NetworkManager {
+        Ok(Self {
             inner: Rc::new(RefCell::new(NetworkManagerInner {
                 session_id,
                 websocket,
@@ -130,7 +138,7 @@ impl NetworkManager {
         &mut self,
         on_open_callback: impl FnMut() + Clone + 'static,
         on_message_callback: impl FnMut(String) + Clone + 'static,
-    ) -> Result<(), JsValue> {
+    ) -> crate::Result<()> {
         let NetworkManagerInner {
             websocket,
             peer_connection,
@@ -170,13 +178,13 @@ impl NetworkManager {
         Ok(())
     }
 
-    fn datachannel(&self) -> Result<RtcDataChannel, JsValue> {
+    fn datachannel(&self) -> crate::Result<RtcDataChannel> {
         Ok(self
             .inner
             .borrow()
             .data_channel
             .as_ref()
-            .ok_or_else(|| JsValue::from_str("no data channel set on instance yet"))?
+            .ok_or_else(|| anyhow!("no data channel set on instance yet"))?
             .clone())
     }
 
@@ -184,16 +192,23 @@ impl NetworkManager {
     /// It might fail if the connection is not yet set up
     /// and thus should only be called after `on_open_callback` triggers.
     /// Otherwise it will result in an error.
-    pub fn send_message(&self, message: &str) -> Result<(), JsValue> {
+    pub fn send_message(&self, message: &str) -> crate::Result<()> {
         debug!("server will try to send a message: {:?}", &message);
         // FIXME(tkarwowski): this is an ugly fix to the fact, that if you send empty string as message
         //  webrtc fails with a cryptic "The operation failed for an operation-specific reason"
         //  message
-        self.datachannel()?.send_with_str(&format!("x{}", message))
+        self.datachannel()?
+            .send_with_str(&format!("x{}", message))
+            .map_err(|err| anyhow!("failed to send string: {:?}", err))
     }
 
     /// Same as [`NetworkManager::send_message`], but allows to send byte array
-    pub fn send_u8_array(&self, message: &[u8]) -> Result<(), JsValue> {
-        self.datachannel()?.send_with_u8_array(message)
+    ///
+    /// # Errors
+    /// This function errs if it fails to send the array through the [`RtcDataChannel`].
+    pub fn send_u8_array(&self, message: &[u8]) -> crate::Result<()> {
+        self.datachannel()?
+            .send_with_u8_array(message)
+            .map_err(|err| anyhow!("failed to send u8 array: {:?}", err))
     }
 }
