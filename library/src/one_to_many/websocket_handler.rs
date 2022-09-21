@@ -1,5 +1,5 @@
+use anyhow::anyhow;
 use log::{debug, error, info};
-use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use wasm_peers_protocol::one_to_many::SignalMessage;
 use wasm_peers_protocol::UserId;
@@ -11,21 +11,24 @@ use crate::one_to_many::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
     set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
     set_peer_connection_on_ice_connection_state_change,
-    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
 };
 use crate::one_to_many::{Connection, NetworkManager};
-use crate::utils::{create_peer_connection, create_sdp_answer, create_sdp_offer, IceCandidate};
+use crate::utils::{
+    create_peer_connection, create_sdp_answer, create_sdp_offer,
+    set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
+    IceCandidate,
+};
 
 /// Basically a finite state machine spread across host, client and signaling server
 /// handling each step in session and then `WebRTC` setup.
-pub(crate) async fn handle_websocket_message(
+pub async fn handle_websocket_message(
     network_manager: NetworkManager,
     message: SignalMessage,
     websocket: WebSocket,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
     on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
     is_host: bool,
-) -> Result<(), JsValue> {
+) -> crate::Result<()> {
     match message {
         SignalMessage::SessionJoin(_session_id, _user_id) => {
             error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
@@ -36,7 +39,7 @@ pub(crate) async fn handle_websocket_message(
                 peer_id, session_id
             );
             let peer_connection =
-                create_peer_connection(&network_manager.inner.borrow().connection_type).unwrap();
+                create_peer_connection(&network_manager.inner.borrow().connection_type)?;
             set_peer_connection_on_data_channel(
                 &peer_connection,
                 peer_id,
@@ -62,9 +65,10 @@ pub(crate) async fn handle_websocket_message(
 
             let offer = create_sdp_offer(&peer_connection).await?;
             let signal_message = SignalMessage::SdpOffer(session_id, peer_id, offer);
-            let signal_message = serde_json_wasm::to_string(&signal_message)
-                .expect("failed to serialize SignalMessage");
-            websocket.send_with_str(&signal_message)?;
+            let signal_message = serde_json_wasm::to_string(&signal_message)?;
+            websocket
+                .send_with_str(&signal_message)
+                .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))?;
             network_manager.inner.borrow_mut().connections.insert(
                 peer_id,
                 Connection::new(peer_connection.clone(), Some(data_channel.clone())),
@@ -77,7 +81,7 @@ pub(crate) async fn handle_websocket_message(
         SignalMessage::SdpOffer(session_id, user_id, offer) => {
             // non-host peer received an offer
             let peer_connection =
-                create_peer_connection(&network_manager.inner.borrow().connection_type).unwrap();
+                create_peer_connection(&network_manager.inner.borrow().connection_type)?;
             set_peer_connection_on_data_channel(
                 &peer_connection,
                 user_id,
@@ -125,14 +129,15 @@ pub(crate) async fn handle_websocket_message(
                 .borrow()
                 .connections
                 .get(&user_id)
-                .unwrap_or_else(|| {
-                    panic!(
+                .map(Clone::clone)
+                .map(|connection| connection.peer_connection)
+                .ok_or_else(|| {
+                    anyhow!(
                         "(is_host: {}) no connection to send answer for given user_id: {:?}",
-                        is_host, &user_id
+                        is_host,
+                        &user_id
                     )
-                })
-                .peer_connection
-                .clone();
+                })?;
             let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
             remote_session_description.sdp(&answer);
             JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
@@ -149,31 +154,35 @@ pub(crate) async fn handle_websocket_message(
                 .borrow()
                 .connections
                 .get(&user_id)
-                .unwrap_or_else(|| {
-                    panic!(
+                .map(Clone::clone)
+                .map(|connection| connection.peer_connection)
+                .ok_or_else(|| {
+                    anyhow!(
                         "no connection to send ice candidate to for given user_id: {:?}",
                         &user_id
                     )
-                })
-                .peer_connection
-                .clone();
+                })?;
             debug!("peer received ice candidate: {}", &ice_candidate);
             // TODO(tkarwowski): IceCandidate should already be struct inside signal message
-            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)
-                .expect("failed to deserialize IceCandidate");
+            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)?;
 
             let mut rtc_candidate = RtcIceCandidateInit::new("");
             rtc_candidate.candidate(&ice_candidate.candidate);
             rtc_candidate.sdp_m_line_index(ice_candidate.sdp_m_line_index);
             rtc_candidate.sdp_mid(ice_candidate.sdp_mid.as_deref());
 
-            let rtc_candidate =
-                RtcIceCandidate::new(&rtc_candidate).expect("failed to create new RtcIceCandidate");
+            let rtc_candidate = RtcIceCandidate::new(&rtc_candidate)
+                .map_err(|err| anyhow!("failed to create RTC ICE candidate: {:?}", err))?;
             JsFuture::from(
                 peer_connection.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&rtc_candidate)),
             )
             .await
-            .expect("failed to add ICE candidate");
+            .map_err(|err| {
+                anyhow!(
+                    "failed to add ice candidate with optional RTC ICE candidate: {:?}",
+                    err
+                )
+            })?;
             debug!("added ice candidate {:?}", ice_candidate);
         }
         SignalMessage::Error(session_id, error) => {

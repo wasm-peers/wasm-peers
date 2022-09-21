@@ -30,18 +30,20 @@ let peer_generator = || {
         SessionId::new("dummy-session-id".to_string()),
         ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
     )
-    .unwrap();
+    .expect("failed to connect to signaling server");
 
-    let peer_clone = peer.clone();
     let peer_on_open = {
+        let peer = peer.clone();
         move |user_id| {
             console::log_1(&format!("connection to peer established: {:?}", user_id).into());
-            peer_clone.send_message(user_id, "ping!");
+            if let Err(err) = peer_clone.send_message(user_id, "ping!") {
+                console::log_1(&format!("failed to send message: {:?}", err).into());
+            }
         }
     };
 
-    let peer_clone = peer.clone();
     let peer_on_message = {
+        let peer = peer.clone();
         move |user_id, message| {
             console::log_1(
                 &format!(
@@ -50,7 +52,9 @@ let peer_generator = || {
                 )
                 .into(),
             );
-            peer_clone.send_message(user_id, "pong!");
+            if let Err(err) = peer_clone.send_message(user_id, "pong!") {
+                console::log_1(&format!("failed to send message: {:?}", err).into());
+            }
         }
     };
     peer.start(peer_on_open, peer_on_message);
@@ -61,7 +65,6 @@ peer_generator();
 ```
  */
 
-use wasm_bindgen::JsValue;
 use wasm_peers_protocol::{SessionId, UserId};
 
 use crate::one_to_many::NetworkManager as OneToManyNetworkManager;
@@ -93,13 +96,13 @@ impl NetworkManager {
     /// session id by which it will identify connecting other peers and type of connection.
     ///
     /// # Errors
-    /// This function errors if opening a `WebSocket` connection to URL provide by `signaling_server_url` fails.
+    /// This function errs if opening a `WebSocket` connection to URL provided by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
-    ) -> Result<Self, JsValue> {
-        Ok(NetworkManager {
+    ) -> crate::Result<Self> {
+        Ok(Self {
             inner: OneToManyNetworkManager::new(
                 signaling_server_url,
                 session_id,
@@ -127,7 +130,7 @@ impl NetworkManager {
     /// # Errors
     /// This function errors if it's called before data channel is established,
     /// or if sending the message via data channel fails.
-    pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
 

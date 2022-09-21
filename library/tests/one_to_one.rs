@@ -19,7 +19,7 @@ fn network_manager_starts_successfully() {
     let mut server = NetworkManager::new(
         SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Local,
+        &ConnectionType::Local,
     )
     .unwrap();
     server.start(|| {}, |_| {}).unwrap();
@@ -33,14 +33,14 @@ fn single_message_passes_both_ways() {
     let mut server = NetworkManager::new(
         SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Local,
+        &ConnectionType::Local,
     )
     .unwrap();
 
     let server_clone = server.clone();
     let server_on_open = move || server_clone.send_message("ping!").unwrap();
     let server_on_message = {
-        let server_received_message = server_received_message.clone();
+        let server_received_message = server_received_message;
         move |message| {
             console::log_1(&format!("server received message: {}", message).into());
             *server_received_message.borrow_mut() = true;
@@ -51,13 +51,13 @@ fn single_message_passes_both_ways() {
     let mut client = NetworkManager::new(
         SIGNALING_SERVER_URL,
         SessionId::new("dummy-session-id".to_string()),
-        ConnectionType::Local,
+        &ConnectionType::Local,
     )
     .unwrap();
     let client_on_open = || { /* do nothing */ };
     let client_clone = client.clone();
     let client_on_message = {
-        let client_received_message = client_received_message.clone();
+        let client_received_message = client_received_message;
         move |message| {
             console::log_1(&format!("client received message: {}", message).into());
             client_clone.send_message("pong!").unwrap();

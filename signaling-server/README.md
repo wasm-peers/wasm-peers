@@ -11,12 +11,25 @@ of the project.
 The server is available on crates.io and installable with `cargo install`.
 
 Just run:
+```bash
+cargo install wasm-peers-signaling-server
+# by default server runs on 127.0.0.1:9001
+wasm-peers-signaling-server 0.0.0.0:9001
+# [INFO] Server::run; addr=0.0.0.0:9001
+# [INFO] listening on http://0.0.0.0:9001
 ```
-$ cargo install wasm-peers-signaling-server
-$ # by default server runs on 127.0.0.1:9001
-$ wasm-peers-signaling-server 0.0.0.0:9001
-[INFO] Server::run; addr=0.0.0.0:9001
-[INFO] listening on http://0.0.0.0:9001
+
+Full requirement for AWS Linux box are as follows:
+```bash
+# install rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# install cc linker
+sudo yum install gcc
+cargo install wasm-peers-signaling-server
+# by default server runs on 127.0.0.1:9001
+wasm-peers-signaling-server 0.0.0.0:9001
+# [INFO] Server::run; addr=0.0.0.0:9001
+# [INFO] listening on http://0.0.0.0:9001
 ```
 
 Now you can take the public IP address of the server and provide it to an instance of network manager from the main crate.

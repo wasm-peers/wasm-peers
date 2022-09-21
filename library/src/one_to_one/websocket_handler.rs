@@ -1,5 +1,5 @@
 use ::log::{debug, error, info};
-use wasm_bindgen::JsValue;
+use anyhow::anyhow;
 use wasm_bindgen_futures::JsFuture;
 use wasm_peers_protocol::one_to_one::SignalMessage;
 use web_sys::{
@@ -11,11 +11,11 @@ use crate::utils::{create_sdp_answer, create_sdp_offer, IceCandidate};
 
 /// Basically a state  spread across host, client and signaling server,
 /// handling each step in session and then `WebRTC` setup.
-pub(crate) async fn handle_websocket_message(
+pub async fn handle_websocket_message(
     message: SignalMessage,
     peer_connection: RtcPeerConnection,
     websocket: WebSocket,
-) -> Result<(), JsValue> {
+) -> crate::Result<()> {
     match message {
         SignalMessage::SessionJoin(_session_id) => {
             error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
@@ -25,23 +25,21 @@ pub(crate) async fn handle_websocket_message(
             if is_host {
                 let offer = create_sdp_offer(&peer_connection).await?;
                 let signal_message = SignalMessage::SdpOffer(session_id.clone(), offer);
-                let signal_message = serde_json_wasm::to_string(&signal_message)
-                    .expect("failed to serialize SignalMessage");
-                websocket.send_with_str(&signal_message)?;
+                let signal_message = serde_json_wasm::to_string(&signal_message)?;
+                websocket.send_with_str(&signal_message).map_err(|err| {
+                    anyhow!("failed to send message across the websocket: {:?}", err)
+                })?;
                 debug!("(is_host: {}) sent an offer successfully", is_host);
             }
         }
         SignalMessage::SdpOffer(session_id, offer) => {
-            let answer = create_sdp_answer(&peer_connection, offer)
-                .await
-                .expect("failed to create SDP answer");
+            let answer = create_sdp_answer(&peer_connection, offer).await?;
             debug!("received an offer and created an answer: {}", answer);
             let signal_message = SignalMessage::SdpAnswer(session_id, answer);
-            let signal_message = serde_json_wasm::to_string(&signal_message)
-                .expect("failed to serialize SignalMessage");
-            websocket
-                .send_with_str(&signal_message)
-                .expect("failed to send SPD answer to signaling server");
+            let signal_message = serde_json_wasm::to_string(&signal_message)?;
+            if let Err(err) = websocket.send_with_str(&signal_message) {
+                error!("failed to send signal message: {:?}", err);
+            }
         }
         SignalMessage::SdpAnswer(session_id, answer) => {
             let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);

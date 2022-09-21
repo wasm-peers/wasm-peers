@@ -72,7 +72,7 @@ let client_generator = || {
     let client_on_message = {
         move |message| {
             console::log_1(&format!("client received message: {}", message).into());
-            client_clone.send_message_to_host("pong!");
+            client_clone.send_message_to_host("pong!").unwrap();
         }
     };
     client.start(client_on_open, client_on_message);
@@ -89,7 +89,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use wasm_bindgen::JsValue;
+use anyhow::anyhow;
 use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
 
@@ -103,8 +103,8 @@ struct Connection {
 }
 
 impl Connection {
-    fn new(peer_connection: RtcPeerConnection, data_channel: Option<RtcDataChannel>) -> Self {
-        Connection {
+    const fn new(peer_connection: RtcPeerConnection, data_channel: Option<RtcDataChannel>) -> Self {
+        Self {
             peer_connection,
             data_channel,
         }
@@ -121,21 +121,27 @@ struct NetworkManagerInner {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct NetworkManager {
+pub struct NetworkManager {
     inner: Rc<RefCell<NetworkManagerInner>>,
 }
 
 impl NetworkManager {
-    pub(crate) fn new(
+    pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
         is_host: bool,
-    ) -> Result<Self, JsValue> {
-        let websocket = WebSocket::new(signaling_server_url)?;
+    ) -> crate::Result<Self> {
+        let websocket = WebSocket::new(signaling_server_url).map_err(|err| {
+            anyhow!(
+                "failed to create connection with signaling server on {}: {:?}",
+                signaling_server_url,
+                err
+            )
+        })?;
         websocket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
-        Ok(NetworkManager {
+        Ok(Self {
             inner: Rc::new(RefCell::new(NetworkManagerInner {
                 session_id,
                 websocket,
@@ -146,7 +152,7 @@ impl NetworkManager {
         })
     }
 
-    pub(crate) fn start(
+    pub fn start(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
@@ -165,24 +171,23 @@ impl NetworkManager {
         );
     }
 
-    pub(crate) fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner
             .borrow()
             .connections
             .get(&user_id)
-            .ok_or_else(|| JsValue::from_str(&format!("no connection for user {}", user_id)))?
+            .ok_or_else(|| anyhow!("no connection for user {}", user_id))?
             .data_channel
             .as_ref()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!("no data channel setup yet for user {}", user_id))
-            })?
+            .ok_or_else(|| anyhow!("no data channel setup yet for user {}", user_id))?
             // this is an ugly fix to the fact, that if you send empty string as message
             // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
             // message
             .send_with_str(&format!("x{}", message))
+            .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))
     }
 
-    pub(crate) fn send_message_to_all(&self, message: &str) {
+    pub fn send_message_to_all(&self, message: &str) {
         for data_channel in self
             .inner
             .borrow()
@@ -191,7 +196,7 @@ impl NetworkManager {
             .filter_map(|connection| connection.data_channel.as_ref())
         {
             // TODO(tkarwowski): some may fail, should we return a list results?
-            let _ = data_channel
+            let _result = data_channel
                 // this is an ugly fix to the fact, that if you send empty string as message
                 // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
                 // message
@@ -228,8 +233,8 @@ impl MiniServer {
         signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
-    ) -> Result<Self, JsValue> {
-        Ok(MiniServer {
+    ) -> crate::Result<Self> {
+        Ok(Self {
             inner: NetworkManager::new(signaling_server_url, session_id, connection_type, true)?,
         })
     }
@@ -248,13 +253,13 @@ impl MiniServer {
 
     /// Sends message over established data channel with a single client-peer represented by
     /// the [`UserId`] returned by signaling server during connection establishment.
-    pub fn send_message(&self, user_id: UserId, message: &str) -> Result<(), JsValue> {
+    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
 
     /// Convenience function that sends the same message to all connected client-peers.
     pub fn send_message_to_all(&self, message: &str) {
-        self.inner.send_message_to_all(message)
+        self.inner.send_message_to_all(message);
     }
 }
 
@@ -271,8 +276,8 @@ impl MiniClient {
         signaling_server_url: &str,
         session_id: SessionId,
         connection_type: ConnectionType,
-    ) -> Result<Self, JsValue> {
-        Ok(MiniClient {
+    ) -> crate::Result<Self> {
+        Ok(Self {
             inner: NetworkManager::new(signaling_server_url, session_id, connection_type, false)?,
         })
     }
@@ -289,7 +294,7 @@ impl MiniClient {
     }
 
     /// Way of communicating with peer-server
-    pub fn send_message_to_host(&self, message: &str) -> Result<(), JsValue> {
+    pub fn send_message_to_host(&self, message: &str) -> crate::Result<()> {
         self.inner.send_message_to_all(message);
         // TODO(tkarwowski): we always return success, but this is subject to change
         Ok(())

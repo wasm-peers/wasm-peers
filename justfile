@@ -10,24 +10,29 @@ help:
 fmt *FLAGS:
     cargo +nightly fmt {{FLAGS}}
 
-test *FLAGS:
-    cargo nextest run {{FLAGS}}
+check *FLAGS:
+    cargo check {{FLAGS}}
+    cargo clippy --tests --examples {{FLAGS}}
 
-run *FLAGS:
-    cargo run {{FLAGS}}
+test *FLAGS:
+    @just run-signaling-server
+    # test on firefox
+    cd ./library && wasm-pack test --headless --firefox
+    # test on chrome
+    cd ./library && wasm-pack test --headless --chrome
+
+run-signaling-server:
+    cd ./signaling/server && cargo run &
 
 pre-commit:
     @just fmt
-    cargo clippy --tests --examples
-    cargo doc --no-deps --all-features
+    @just check -- -D warnings
     @just test
+    cargo doc --no-deps --all-features
     cargo spellcheck fix
 
 coverage *FLAGS:
     cargo llvm-cov {{FLAGS}} --open
-
-benchmark *FLAGS:
-    cargo criterion {{FLAGS}}
 
 thorough-check:
     cargo +nightly udeps --all-targets
