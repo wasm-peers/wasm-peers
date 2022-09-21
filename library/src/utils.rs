@@ -1,11 +1,21 @@
+use anyhow::anyhow;
 use js_sys::{Array, Object, Reflect};
+use log::debug;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::JsValue;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
+use wasm_peers_protocol::SessionId;
 use web_sys::{RtcConfiguration, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit};
 
+/// Returns a new `SessionId` instance that can be used to identify a session by signaling server.
+#[must_use]
+pub fn get_random_session_id() -> SessionId {
+    SessionId::new(uuid::Uuid::new_v4().to_string())
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct IceCandidate {
+pub struct IceCandidate {
     pub candidate: String,
     pub sdp_mid: Option<String>,
     pub sdp_m_line_index: Option<u16>,
@@ -27,17 +37,23 @@ pub enum ConnectionType {
     },
 }
 
-pub(crate) fn create_peer_connection(
+pub fn create_peer_connection(
     connection_type: &ConnectionType,
-) -> Result<RtcPeerConnection, JsValue> {
-    match connection_type {
-        ConnectionType::Local => RtcPeerConnection::new(),
-        ConnectionType::Stun { urls } => {
+) -> crate::Result<RtcPeerConnection> {
+    match *connection_type {
+        ConnectionType::Local => RtcPeerConnection::new()
+            .map_err(|err| anyhow!("failed to create RTC peer connection: {:?}", err)),
+        ConnectionType::Stun { ref urls } => {
             let ice_servers = Array::new();
             {
                 let server_entry = Object::new();
 
-                Reflect::set(&server_entry, &"urls".into(), &urls.into())?;
+                Reflect::set(&server_entry, &"urls".into(), &urls.into()).map_err(|err| {
+                    anyhow!(
+                        "failed to set 'urls' key on turn server entry object: {:?}",
+                        err
+                    )
+                })?;
 
                 ice_servers.push(&server_entry);
             }
@@ -46,27 +62,55 @@ pub(crate) fn create_peer_connection(
             rtc_configuration.ice_servers(&ice_servers);
 
             RtcPeerConnection::new_with_configuration(&rtc_configuration)
+                .map_err(|err| anyhow!("failed to create RTC peer connection: {:?}", err))
         }
         ConnectionType::StunAndTurn {
-            stun_urls,
-            turn_urls,
-            username,
-            credential,
+            ref stun_urls,
+            ref turn_urls,
+            ref username,
+            ref credential,
         } => {
             let ice_servers = Array::new();
             {
                 let stun_server_entry = Object::new();
 
-                Reflect::set(&stun_server_entry, &"urls".into(), &stun_urls.into())?;
+                Reflect::set(&stun_server_entry, &"urls".into(), &stun_urls.into()).map_err(
+                    |err| {
+                        anyhow!(
+                            "failed to set 'urls' key on turn server entry object: {:?}",
+                            err
+                        )
+                    },
+                )?;
 
                 ice_servers.push(&stun_server_entry);
             }
             {
                 let turn_server_entry = Object::new();
 
-                Reflect::set(&turn_server_entry, &"urls".into(), &turn_urls.into())?;
-                Reflect::set(&turn_server_entry, &"username".into(), &username.into())?;
-                Reflect::set(&turn_server_entry, &"credential".into(), &credential.into())?;
+                Reflect::set(&turn_server_entry, &"urls".into(), &turn_urls.into()).map_err(
+                    |err| {
+                        anyhow!(
+                            "failed to set 'urls' key on turn server entry object: {:?}",
+                            err
+                        )
+                    },
+                )?;
+                Reflect::set(&turn_server_entry, &"username".into(), &username.into()).map_err(
+                    |err| {
+                        anyhow!(
+                            "failed to set 'username' key on turn server entry object: {:?}",
+                            err
+                        )
+                    },
+                )?;
+                Reflect::set(&turn_server_entry, &"credential".into(), &credential.into())
+                    .map_err(|err| {
+                        anyhow!(
+                            "failed to set 'credential' key on turn server entry object: {:?}",
+                            err
+                        )
+                    })?;
 
                 ice_servers.push(&turn_server_entry);
             }
@@ -75,56 +119,97 @@ pub(crate) fn create_peer_connection(
             rtc_configuration.ice_servers(&ice_servers);
 
             RtcPeerConnection::new_with_configuration(&rtc_configuration)
+                .map_err(|err| anyhow!("failed to create RTC peer connection: {:?}", err))
         }
     }
 }
 
-pub(crate) async fn create_sdp_offer(
-    peer_connection: &RtcPeerConnection,
-) -> Result<String, JsValue> {
+pub async fn create_sdp_offer(peer_connection: &RtcPeerConnection) -> crate::Result<String> {
     let offer = JsFuture::from(peer_connection.create_offer())
         .await
         .map_err(|error| {
-            JsValue::from_str(&format!(
+            anyhow!(
                 "failed to create an SDP offer: {}",
                 error.as_string().unwrap_or_default()
-            ))
+            )
         })?;
-    let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))?
+    let offer = Reflect::get(&offer, &JsValue::from_str("sdp"))
+        .map_err(|err| {
+            anyhow!(
+                "failed to get value for 'sdp' key from offer object: {:?}",
+                err
+            )
+        })?
         .as_string()
-        .expect("failed to create JS object for SDP offer");
+        .ok_or_else(|| anyhow!("no 'sdp' key in offer object"))?;
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     local_session_description.sdp(&offer);
     JsFuture::from(peer_connection.set_local_description(&local_session_description))
         .await
         .map_err(|error| {
-            JsValue::from_str(&format!(
+            anyhow!(
                 "failed to set local description: {}",
                 error.as_string().unwrap_or_default()
-            ))
+            )
         })?;
 
     Ok(offer)
 }
 
-pub(crate) async fn create_sdp_answer(
+pub async fn create_sdp_answer(
     peer_connection: &RtcPeerConnection,
     offer: String,
-) -> Result<String, JsValue> {
+) -> crate::Result<String> {
     let mut remote_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
     remote_session_description.sdp(&offer);
-    JsFuture::from(peer_connection.set_remote_description(&remote_session_description)).await?;
+    JsFuture::from(peer_connection.set_remote_description(&remote_session_description))
+        .await
+        .map_err(|err| anyhow!("failed to set remote session description: {:?}", err))?;
 
-    let answer = JsFuture::from(peer_connection.create_answer()).await?;
-    let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))?
+    let answer = JsFuture::from(peer_connection.create_answer())
+        .await
+        .map_err(|err| anyhow!("failed to create SDP answer: {:?}", err))?;
+    let answer = Reflect::get(&answer, &JsValue::from_str("sdp"))
+        .map_err(|err| {
+            anyhow!(
+                "failed to get value for 'sdp' key from answer object: {:?}",
+                err
+            )
+        })?
         .as_string()
-        .expect("failed to create JS object for SPD answer");
+        .ok_or_else(|| anyhow!("failed to represent object value as string"))?;
 
     let mut local_session_description = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
     local_session_description.sdp(&answer);
-    JsFuture::from(peer_connection.set_local_description(&local_session_description)).await?;
+    JsFuture::from(peer_connection.set_local_description(&local_session_description))
+        .await
+        .map_err(|err| anyhow!("failed to set local description: {:?}", err))?;
 
     Ok(answer)
+}
+
+pub fn set_peer_connection_on_negotiation_needed(peer_connection: &RtcPeerConnection) {
+    let on_negotiation_needed: Box<dyn FnMut()> = Box::new(move || {
+        debug!("on negotiation needed event occurred");
+    });
+    let on_negotiation_needed = Closure::wrap(on_negotiation_needed);
+    peer_connection.set_onnegotiationneeded(Some(on_negotiation_needed.as_ref().unchecked_ref()));
+    on_negotiation_needed.forget();
+}
+
+pub fn set_peer_connection_on_ice_gathering_state_change(peer_connection: &RtcPeerConnection) {
+    let peer_connection_clone = peer_connection.clone();
+    let on_ice_gathering_state_change: Box<dyn FnMut()> = Box::new(move || {
+        debug!(
+            "ice gathering state: {:?}",
+            peer_connection_clone.ice_gathering_state()
+        );
+    });
+    let on_ice_gathering_state_change = Closure::wrap(on_ice_gathering_state_change);
+    peer_connection.set_onicegatheringstatechange(Some(
+        on_ice_gathering_state_change.as_ref().unchecked_ref(),
+    ));
+    on_ice_gathering_state_change.forget();
 }
 
 #[cfg(test)]
@@ -153,15 +238,21 @@ mod test {
     #[wasm_bindgen_test]
     async fn test_create_sdp_offer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
-        let _offer = create_sdp_offer(&peer_connection).await.unwrap();
+        let _offer = create_sdp_offer(&peer_connection)
+            .await
+            .expect("failed to create SDP offer");
         assert!(peer_connection.local_description().is_some());
     }
 
     #[wasm_bindgen_test]
     async fn test_create_sdp_answer_is_successful() {
         let peer_connection = RtcPeerConnection::new().expect("failed to create peer connection");
-        let offer = create_sdp_offer(&peer_connection).await.unwrap();
-        let _answer = create_sdp_answer(&peer_connection, offer).await.unwrap();
+        let offer = create_sdp_offer(&peer_connection)
+            .await
+            .expect("failed to create SDP offer");
+        let _answer = create_sdp_answer(&peer_connection, offer)
+            .await
+            .expect("failed to create SDP answer");
         assert!(peer_connection.local_description().is_some());
         assert!(peer_connection.remote_description().is_some());
     }

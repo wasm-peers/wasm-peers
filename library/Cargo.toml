@@ -31,6 +31,7 @@ log = "0.4"
 uuid = { version = "1", features = ["v4", "js"] }
 
 wasm-peers-protocol = { path = "../protocol", version = "0.3" }
+anyhow = "1"
 
 [dependencies.web-sys]
 version = "0.3.22"

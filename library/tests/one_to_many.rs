@@ -40,7 +40,6 @@ fn single_message_passes_both_ways() {
 
     let server_clone = server.clone();
     let server_on_open = {
-        let server_open_connections_count = server_open_connections_count.clone();
         move |user_id| {
             console::log_1(&format!("connection to user established: {:?}", user_id).into());
             *server_open_connections_count.borrow_mut() += 1;
@@ -50,7 +49,6 @@ fn single_message_passes_both_ways() {
         }
     };
     let server_on_message = {
-        let server_received_message = server_received_message.clone();
         move |user_id, message| {
             console::log_1(
                 &format!(

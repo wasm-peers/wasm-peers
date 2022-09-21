@@ -3,90 +3,72 @@ Helper crate that declares common types and structures shared between [wasm-peer
 and [wasm-peers-signaling-server](https://docs.rs/wasm-peers-signaling-server/latest/wasm_peers_signaling_server/).
 */
 
-#![deny(missing_docs)]
+#![allow(clippy::module_name_repetitions)]
+// clippy WARN level lints
+#![warn(
+    // missing_docs,
+    clippy::cargo,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::dbg_macro,
+    clippy::unwrap_used,
+    clippy::integer_division,
+    clippy::large_include_file,
+    clippy::map_err_ignore,
+    // clippy::missing_docs_in_private_items,
+    clippy::panic,
+    clippy::todo,
+    clippy::undocumented_unsafe_blocks,
+    clippy::unimplemented,
+    clippy::unreachable
+)]
+// clippy WARN level lints, that can be upgraded to DENY if preferred
+#![warn(
+    clippy::float_arithmetic,
+    clippy::integer_arithmetic,
+    clippy::modulo_arithmetic,
+    clippy::as_conversions,
+    clippy::assertions_on_result_states,
+    clippy::clone_on_ref_ptr,
+    clippy::create_dir,
+    clippy::default_union_representation,
+    clippy::deref_by_slicing,
+    clippy::empty_drop,
+    clippy::empty_structs_with_brackets,
+    clippy::exit,
+    clippy::filetype_is_file,
+    clippy::float_cmp_const,
+    clippy::if_then_some_else_none,
+    clippy::indexing_slicing,
+    clippy::let_underscore_must_use,
+    clippy::lossy_float_literal,
+    clippy::pattern_type_mismatch,
+    clippy::string_slice,
+    clippy::try_err
+)]
+// clippy DENY level lints, they always have a quick fix that should be preferred
+#![deny(
+    clippy::wildcard_imports,
+    clippy::multiple_inherent_impl,
+    clippy::rc_buffer,
+    clippy::rc_mutex,
+    clippy::rest_pat_in_fully_bound_structs,
+    clippy::same_name_method,
+    clippy::self_named_module_files,
+    clippy::separated_literal_suffix,
+    clippy::shadow_unrelated,
+    clippy::str_to_string,
+    clippy::string_add,
+    clippy::string_to_string,
+    clippy::unnecessary_self_imports,
+    clippy::unneeded_field_pattern,
+    clippy::unseparated_literal_suffix,
+    clippy::verbose_file_reads
+)]
 
-use std::fmt::{Display, Formatter};
-use std::ops::Deref;
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
-
+mod common;
 pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;
 
-/// Unique identifier of signaling session that each user provides
-/// when communicating with the signaling server.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
-pub struct SessionId(String);
-
-impl SessionId {
-    /// Wrap String into a `SessionId` `struct`
-    pub fn new(inner: String) -> Self {
-        SessionId(inner)
-    }
-
-    /// Return reference to the underling string
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-    /// Acquire the underlying type
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-}
-
-impl FromStr for SessionId {
-    type Err = Box<dyn std::error::Error>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(SessionId(s.to_string()))
-    }
-}
-
-impl Display for SessionId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// Unique identifier of each peer connected to signaling server
-/// useful when communicating in one-to-many and many-to-many .
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
-pub struct UserId(usize);
-
-impl UserId {
-    /// Wrap `usize` into a `UserId` `struct`
-    pub fn new(inner: usize) -> Self {
-        UserId(inner)
-    }
-
-    /// Acquire the underlying type
-    pub fn into_inner(self) -> usize {
-        self.0
-    }
-}
-
-impl From<usize> for UserId {
-    fn from(val: usize) -> Self {
-        UserId(val)
-    }
-}
-
-impl Display for UserId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Deref for UserId {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/// Unique identifier specifying which peer is host and will be creating an offer,
-/// and which will await it.
-pub type IsHost = bool;
+pub use common::{IsHost, SessionId, UserId};

@@ -3,10 +3,10 @@
 # wasm-peers
 [![crates.io](https://img.shields.io/crates/v/wasm_peers.svg)](https://crates.io/crates/wasm_peers)
 [![docs.rs](https://img.shields.io/docsrs/wasm-peers)](https://docs.rs/wasm_peers)
+[![crates.io](https://img.shields.io/crates/d/wasm_peers.svg)](https://crates.io/crates/wasm_peers)
+![MIT/Apache 2.0 licensed](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
 [![CI](https://github.com/wasm-peers/wasm-peers/workflows/CI/badge.svg)](https://github.com/wasm-peers/wasm-peers/actions?query=workflow%3ACI)
 [![coverage status](https://coveralls.io/repos/github/wasm-peers/wasm-peers/badge.svg?branch=main)](https://coveralls.io/github/wasm-peers/wasm-peers?branch=main)
-[![APACHE licensed](https://shields.io/github/license/wasm-peers/wasm-peers.svg)](https://github.com/wasm-peers/wasm-peers/blob/main/LICENSE-APACHE)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wasm-peers/wasm-peers/blob/main/LICENSE-MIT)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 This crate provides an easy-to-use wrapper around WebRTC and DataChannels for a peer-to-peer connections.
@@ -48,7 +48,7 @@ fn main() {
     let mut peer1 = NetworkManager::new(
         SIGNALING_SERVER_URL,
         session_id.clone(),
-        ConnectionType::Stun,
+        &ConnectionType::Stun,
     ).unwrap();
 
     let peer1_clone = peer1.clone();
@@ -63,7 +63,7 @@ fn main() {
     let mut peer2 = NetworkManager::new(
         SIGNALING_SERVER_URL,
         session_id,
-        ConnectionType::Stun,
+        &ConnectionType::Stun,
     ).unwrap();
     let peer2_on_open = || { /* do nothing */ };
     let peer2_clone = peer2.clone();
