@@ -22,4 +22,4 @@ simplelog = "0.12.0"
 log = "0.4.8"
 anyhow = "1"
 
-wasm-peers-protocol = { path = "../protocol", version = "0.3" }
+wasm-peers-protocol = { path = "../../protocol", version = "0.3" }

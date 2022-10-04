@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "protocol",
-    "signaling-server",
+    "signaling-server/warp",
+    "signaling-server/axum",
     "library",
 ]
