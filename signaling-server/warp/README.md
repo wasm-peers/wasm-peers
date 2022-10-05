@@ -12,9 +12,9 @@ The server is available on crates.io and installable with `cargo install`.
 
 Just run:
 ```
-$ cargo install wasm-peers-signaling-server
+$ cargo install wasm-peers-signaling-server-warp
 $ # by default server runs on 127.0.0.1:9001
-$ wasm-peers-signaling-server 0.0.0.0:9001
+$ wasm-peers-signaling-server-warp 0.0.0.0:9001
 [INFO] Server::run; addr=0.0.0.0:9001
 [INFO] listening on http://0.0.0.0:9001
 ```

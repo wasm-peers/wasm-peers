@@ -1,43 +1,25 @@
-use axum::{
-    extract::ws::{WebSocket, WebSocketUpgrade},
-    response::{IntoResponse, Response},
-    routing::get,
-    Router,
-};
-use std::env;
+use axum::{extract::ws::WebSocketUpgrade, response::Response, routing::get, Extension, Router};
 use std::net::SocketAddr;
-use std::str::FromStr;
-//use wasm_peers_signaling_server::{many_to_many, one_to_many, one_to_one};
+use wasm_peers_signaling_server_axum::one_to_one::{self, Connections, Sessions};
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/ws", get(handler));
+    let connections = one_to_one::Connections::default();
+    let sessions = one_to_one::Sessions::default();
 
-    async fn handler(ws: WebSocketUpgrade) -> Response {
-        ws.on_upgrade(handle_socket)
+    let app = Router::new()
+        .route("/one_to_one", get(handler))
+        .layer(Extension(connections))
+        .layer(Extension(sessions));
+
+    async fn handler(
+        ws: WebSocketUpgrade,
+        Extension(connections): Extension<Connections>,
+        Extension(sessions): Extension<Sessions>,
+    ) -> Response {
+        ws.on_upgrade(move |socket| one_to_one::user_connected(socket, connections, sessions))
     }
 
-    async fn handle_socket(mut socket: WebSocket) {
-        while let Some(msg) = socket.recv().await {
-            println!("recieved");
-            let msg = if let Ok(msg) = msg {
-                msg
-            } else {
-                // client disconnected
-                println!("disconnected");
-                return;
-            };
-
-            if socket.send(msg.clone()).await.is_err() {
-                // client disconnected
-                return;
-            }
-
-            println!("send {:#?}", msg);
-        }
-    }
-
-    // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 9001));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
