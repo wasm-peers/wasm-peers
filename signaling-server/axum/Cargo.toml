@@ -22,3 +22,6 @@ tokio-stream = "0.1.8"
 axum = { version = "0.5.16", features = ["ws"] }
 wasm-peers-protocol = {path = "../../protocol", version = "0.3"}
 uuid = "1.1.2"
+
+[dev-dependencies]
+wasm-peers = {path = "../../library", version = "0.4.1"}
