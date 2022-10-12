@@ -128,8 +128,11 @@ impl NetworkManager {
     /// the [`UserId`] returned by signaling server during connection establishment.
     ///
     /// # Errors
-    /// This function errors if it's called before data channel is established,
-    /// or if sending the message via data channel fails.
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
