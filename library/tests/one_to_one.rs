@@ -22,7 +22,7 @@ fn network_manager_starts_successfully() {
         &ConnectionType::Local,
     )
     .unwrap();
-    server.start(|| {}, |_| {}).unwrap();
+    server.start(|| {}, |_| {});
 }
 
 #[wasm_bindgen_test]
@@ -46,7 +46,7 @@ fn single_message_passes_both_ways() {
             *server_received_message.borrow_mut() = true;
         }
     };
-    server.start(server_on_open, server_on_message).unwrap();
+    server.start(server_on_open, server_on_message);
 
     let mut client = NetworkManager::new(
         SIGNALING_SERVER_URL,
@@ -64,7 +64,7 @@ fn single_message_passes_both_ways() {
             *client_received_message.borrow_mut() = true;
         }
     };
-    client.start(client_on_open, client_on_message).unwrap();
+    client.start(client_on_open, client_on_message);
 
     // assert!(*client_received_message.borrow());
     // assert!(*server_received_message.borrow());

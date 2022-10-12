@@ -21,7 +21,7 @@ test *FLAGS:
     cd ./library && wasm-pack test --headless --chrome
 
 run-signaling-server:
-    cd ./signaling/server && cargo run &
+    cd ./signaling-server && cargo run &
 
 pre-commit:
     @just fmt
@@ -70,3 +70,5 @@ init:
     cargo binstall cargo-audit --no-confirm
     cargo binstall cargo-upgrades --no-confirm
     cargo binstall cargo-unused-features --no-confirm
+    # echo install project specific tools
+    cargo binstall wasm-pack
