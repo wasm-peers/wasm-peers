@@ -5,26 +5,138 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 jobs:
+
   test:
+    name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: cargo run &
-        working-directory: ./signaling-server
-      - name: Test on Firefox
-        run: wasm-pack test --headless --firefox
-        working-directory: ./library
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - run: |
+          cargo install just wasm-pack
+          just test
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v1
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: clippy
+      - uses: Swatinem/rust-cache@v1
+      - name: Clippy check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features --workspace -- -D warnings
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Check documentation
         env:
-          WS_IP_PORT: 127.0.0.1:9001
-      - name: Test on Chrome
-        run: wasm-pack test --headless --chrome
-        working-directory: ./library
-        env:
-          WS_IP_PORT: 127.0.0.1:9001
-#      - name: Check docstring compile
-#         this fails with error: Can't skip running doc tests with --no-run
-#         run: cargo +nightly test --doc -Zdoctest-xcompile --no-run
+          RUSTDOCFLAGS: -D warnings
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps --document-private-items --all-features --workspace --examples
+
+  publish-dry-run:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Publish dry-run of wasm-peers crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: -p wasm-peers --dry-run
+      - name: Publish dry-run of wasm-peers-protocol crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: -p wasm-peers-protocol --dry-run
+      - name: Publish dry-run of wasm-peers-signaling-server crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: -p wasm-peers-signaling-server --dry-run
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--all-features --workspace --ignore-tests --out Lcov'
+      - name: Upload to Coveralls
+        # upload only if push
+        if: ${{ github.event_name == 'push' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: './lcov.info'
