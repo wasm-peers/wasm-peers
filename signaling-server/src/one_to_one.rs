@@ -47,7 +47,7 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
         let msg = match result {
             Ok(msg) => msg,
             Err(err) => {
-                eprintln!("websocket error (user_id={:?}): {}", user_id, err);
+                error!("websocket error (user_id={:?}): {}", user_id, err);
                 break;
             }
         };
@@ -57,7 +57,7 @@ pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: S
         }
     }
 
-    eprintln!("user disconnected: {:?}", user_id);
+    error!("user disconnected: {:?}", user_id);
     user_disconnected(user_id, &connections, &sessions).await;
 }
 

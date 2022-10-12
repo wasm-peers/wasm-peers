@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use log::{debug, error, info};
 use wasm_bindgen_futures::JsFuture;
 use wasm_peers_protocol::one_to_many::SignalMessage;
-use wasm_peers_protocol::UserId;
+use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{
     RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
 };
@@ -30,98 +30,33 @@ pub async fn handle_websocket_message(
     is_host: bool,
 ) -> crate::Result<()> {
     match message {
-        SignalMessage::SessionJoin(_session_id, _user_id) => {
+        SignalMessage::SessionJoin(_session_id, _peer_id) => {
             error!("error, SessionStartOrJoin should only be sent by peers to signaling server");
         }
         SignalMessage::SessionReady(session_id, peer_id) => {
-            info!(
-                "peer received info that session with {:?} is ready {:?}",
-                peer_id, session_id
-            );
-            let peer_connection =
-                create_peer_connection(&network_manager.inner.borrow().connection_type)?;
-            set_peer_connection_on_data_channel(
-                &peer_connection,
+            session_ready(
+                network_manager,
+                websocket,
+                on_open_callback,
+                on_message_callback,
+                is_host,
+                session_id,
                 peer_id,
-                network_manager.clone(),
-                on_open_callback.clone(),
-                on_message_callback.clone(),
-            );
-            set_peer_connection_on_ice_candidate(
-                &peer_connection,
-                peer_id,
-                websocket.clone(),
-                session_id.clone(),
-            );
-            set_peer_connection_on_ice_connection_state_change(&peer_connection);
-            set_peer_connection_on_ice_gathering_state_change(&peer_connection);
-            set_peer_connection_on_negotiation_needed(&peer_connection);
-
-            let data_channel =
-                peer_connection.create_data_channel(&format!("{}-{}", session_id, peer_id));
-            set_data_channel_on_open(&data_channel, peer_id, on_open_callback.clone());
-            set_data_channel_on_error(&data_channel);
-            set_data_channel_on_message(&data_channel, peer_id, on_message_callback.clone());
-
-            let offer = create_sdp_offer(&peer_connection).await?;
-            let signal_message = SignalMessage::SdpOffer(session_id, peer_id, offer);
-            let signal_message = serde_json_wasm::to_string(&signal_message)?;
-            websocket
-                .send_with_str(&signal_message)
-                .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))?;
-            network_manager.inner.borrow_mut().connections.insert(
-                peer_id,
-                Connection::new(peer_connection.clone(), Some(data_channel.clone())),
-            );
-            debug!(
-                "(is_host: {}) sent an offer to {:?} successfully",
-                is_host, peer_id
-            );
+            )
+            .await?;
         }
-        SignalMessage::SdpOffer(session_id, user_id, offer) => {
-            // non-host peer received an offer
-            let peer_connection =
-                create_peer_connection(&network_manager.inner.borrow().connection_type)?;
-            set_peer_connection_on_data_channel(
-                &peer_connection,
-                user_id,
-                network_manager.clone(),
-                on_open_callback.clone(),
-                on_message_callback.clone(),
-            );
-            set_peer_connection_on_ice_candidate(
-                &peer_connection,
-                user_id,
-                websocket.clone(),
-                session_id.clone(),
-            );
-            set_peer_connection_on_ice_connection_state_change(&peer_connection);
-            set_peer_connection_on_ice_gathering_state_change(&peer_connection);
-            set_peer_connection_on_negotiation_needed(&peer_connection);
-
-            network_manager
-                .inner
-                .borrow_mut()
-                .connections
-                .insert(user_id, Connection::new(peer_connection.clone(), None));
-            debug!(
-                "(is_host: {}) added connection for {:?} successfully",
-                is_host, user_id
-            );
-
-            let answer = create_sdp_answer(&peer_connection, offer)
-                .await
-                .expect("failed to create SDP answer");
-            debug!(
-                "received an offer from {:?} and created an answer: {}",
-                user_id, answer
-            );
-            let signal_message = SignalMessage::SdpAnswer(session_id, user_id, answer);
-            let signal_message = serde_json_wasm::to_string(&signal_message)
-                .expect("failed to serialize SignalMessage");
-            websocket
-                .send_with_str(&signal_message)
-                .expect("failed to send SPD answer to signaling server");
+        SignalMessage::SdpOffer(session_id, peer_id, offer) => {
+            sdp_offer(
+                network_manager,
+                websocket,
+                on_open_callback,
+                on_message_callback,
+                is_host,
+                session_id,
+                peer_id,
+                offer,
+            )
+            .await?;
         }
         SignalMessage::SdpAnswer(session_id, user_id, answer) => {
             let peer_connection = network_manager
@@ -193,6 +128,115 @@ pub async fn handle_websocket_message(
         }
     }
 
+    Ok(())
+}
+
+async fn session_ready(
+    network_manager: NetworkManager,
+    websocket: WebSocket,
+    on_open_callback: impl FnMut(UserId) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    is_host: bool,
+    session_id: SessionId,
+    peer_id: UserId,
+) -> crate::Result<()> {
+    info!(
+        "peer received info that session with {:?} is ready {:?}",
+        peer_id, session_id
+    );
+    let peer_connection = create_peer_connection(&network_manager.inner.borrow().connection_type)?;
+    set_peer_connection_on_data_channel(
+        &peer_connection,
+        peer_id,
+        network_manager.clone(),
+        on_open_callback.clone(),
+        on_message_callback.clone(),
+    );
+    set_peer_connection_on_ice_candidate(
+        &peer_connection,
+        peer_id,
+        websocket.clone(),
+        session_id.clone(),
+    );
+    set_peer_connection_on_ice_connection_state_change(&peer_connection);
+    set_peer_connection_on_ice_gathering_state_change(&peer_connection);
+    set_peer_connection_on_negotiation_needed(&peer_connection);
+
+    let data_channel = peer_connection.create_data_channel(&format!("{}-{}", session_id, peer_id));
+    set_data_channel_on_open(&data_channel, peer_id, on_open_callback.clone());
+    set_data_channel_on_error(&data_channel);
+    set_data_channel_on_message(&data_channel, peer_id, on_message_callback.clone());
+
+    let offer = create_sdp_offer(&peer_connection).await?;
+    let signal_message = SignalMessage::SdpOffer(session_id, peer_id, offer);
+    let signal_message = serde_json_wasm::to_string(&signal_message)?;
+    websocket
+        .send_with_str(&signal_message)
+        .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))?;
+    network_manager.inner.borrow_mut().connections.insert(
+        peer_id,
+        Connection::new(peer_connection.clone(), Some(data_channel.clone())),
+    );
+    debug!(
+        "(is_host: {}) sent an offer to {:?} successfully",
+        is_host, peer_id
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn sdp_offer(
+    network_manager: NetworkManager,
+    websocket: WebSocket,
+    on_open_callback: impl FnMut(UserId) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    is_host: bool,
+    session_id: SessionId,
+    peer_id: UserId,
+    offer: String,
+) -> crate::Result<()> {
+    // non-host peer received an offer
+    let peer_connection = create_peer_connection(&network_manager.inner.borrow().connection_type)?;
+    set_peer_connection_on_data_channel(
+        &peer_connection,
+        peer_id,
+        network_manager.clone(),
+        on_open_callback.clone(),
+        on_message_callback.clone(),
+    );
+    set_peer_connection_on_ice_candidate(
+        &peer_connection,
+        peer_id,
+        websocket.clone(),
+        session_id.clone(),
+    );
+    set_peer_connection_on_ice_connection_state_change(&peer_connection);
+    set_peer_connection_on_ice_gathering_state_change(&peer_connection);
+    set_peer_connection_on_negotiation_needed(&peer_connection);
+
+    network_manager
+        .inner
+        .borrow_mut()
+        .connections
+        .insert(peer_id, Connection::new(peer_connection.clone(), None));
+    debug!(
+        "(is_host: {}) added connection for {:?} successfully",
+        is_host, peer_id
+    );
+
+    let answer = create_sdp_answer(&peer_connection, offer)
+        .await
+        .expect("failed to create SDP answer");
+    debug!(
+        "received an offer from {:?} and created an answer: {}",
+        peer_id, answer
+    );
+    let signal_message = SignalMessage::SdpAnswer(session_id, peer_id, answer);
+    let signal_message =
+        serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
+    websocket
+        .send_with_str(&signal_message)
+        .expect("failed to send SPD answer to signaling server");
     Ok(())
 }
 

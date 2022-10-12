@@ -105,6 +105,9 @@ impl NetworkManager {
     /// Creates an instance with all resources required to create a connection.
     /// Requires an  address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
+    ///
+    /// # Errors
+    /// This function errs if opening a `WebSocket` connection to URL provided by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -138,7 +141,7 @@ impl NetworkManager {
         &mut self,
         on_open_callback: impl FnMut() + Clone + 'static,
         on_message_callback: impl FnMut(String) + Clone + 'static,
-    ) -> crate::Result<()> {
+    ) {
         let NetworkManagerInner {
             websocket,
             peer_connection,
@@ -174,8 +177,6 @@ impl NetworkManager {
         set_peer_connection_on_negotiation_needed(&peer_connection);
         set_websocket_on_open(&websocket, session_id);
         set_websocket_on_message(&websocket, peer_connection);
-
-        Ok(())
     }
 
     fn datachannel(&self) -> crate::Result<RtcDataChannel> {
@@ -189,23 +190,31 @@ impl NetworkManager {
     }
 
     /// Send message to the other end of the connection.
+    ///
+    /// # Errors
     /// It might fail if the connection is not yet set up
     /// and thus should only be called after `on_open_callback` triggers.
-    /// Otherwise it will result in an error.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_message(&self, message: &str) -> crate::Result<()> {
         debug!("server will try to send a message: {:?}", &message);
         // FIXME(tkarwowski): this is an ugly fix to the fact, that if you send empty string as message
         //  webrtc fails with a cryptic "The operation failed for an operation-specific reason"
         //  message
         self.datachannel()?
-            .send_with_str(&format!("x{}", message))
+            .send_with_str(&format!("x{message}"))
             .map_err(|err| anyhow!("failed to send string: {:?}", err))
     }
 
     /// Same as [`NetworkManager::send_message`], but allows to send byte array
     ///
     /// # Errors
-    /// This function errs if it fails to send the array through the [`RtcDataChannel`].
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_u8_array(&self, message: &[u8]) -> crate::Result<()> {
         self.datachannel()?
             .send_with_u8_array(message)

@@ -126,6 +126,12 @@ pub struct NetworkManager {
 }
 
 impl NetworkManager {
+    /// Creates an instance with all resources required to create a connection.
+    /// Requires an  address of an signaling server instance,
+    /// session id by which it will identify connecting pair of peers and type of connection.
+    ///
+    /// # Errors
+    /// This function errs if opening a `WebSocket` connection to URL provided by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -171,6 +177,12 @@ impl NetworkManager {
         );
     }
 
+    /// Send message to a connected client-user identified by unique [`UserId`]
+    ///
+    /// # Errors
+    /// This function can err if:
+    /// - sending of the message was tried before data channel was established or,
+    /// - sending of the message failed.
     pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner
             .borrow()
@@ -187,6 +199,14 @@ impl NetworkManager {
             .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))
     }
 
+    /// Send message to a all connected client-users.
+    ///
+    /// # Errors
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_message_to_all(&self, message: &str) {
         for data_channel in self
             .inner
@@ -229,6 +249,9 @@ impl MiniServer {
     /// Creates an instance with all resources required to create a connections to client-peers.
     /// Requires an  address of an signaling server instance,
     /// session id by which it will identify connecting pair of peers and type of connection.
+    ///
+    /// # Errors
+    /// This function errs if opening a `WebSocket` connection to URL provided by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -253,6 +276,13 @@ impl MiniServer {
 
     /// Sends message over established data channel with a single client-peer represented by
     /// the [`UserId`] returned by signaling server during connection establishment.
+    ///
+    /// # Errors
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
@@ -272,6 +302,9 @@ pub struct MiniClient {
 
 impl MiniClient {
     /// Same as [`MiniServer::new`]
+    ///
+    /// # Errors
+    /// This function errs if opening a `WebSocket` connection to URL provided by `signaling_server_url` fails.
     pub fn new(
         signaling_server_url: &str,
         session_id: SessionId,
@@ -294,6 +327,17 @@ impl MiniClient {
     }
 
     /// Way of communicating with peer-server
+    /// Send message to the other end of the connection.
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error.
+    ///
+    /// # Errors
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
     pub fn send_message_to_host(&self, message: &str) -> crate::Result<()> {
         self.inner.send_message_to_all(message);
         // TODO(tkarwowski): we always return success, but this is subject to change
