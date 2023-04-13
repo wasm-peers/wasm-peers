@@ -17,6 +17,8 @@ async fn main() {
     )
     .unwrap();
 
+    let health = warp::path("health").map(|| "OK");
+
     let one_to_one_signaling = {
         let connections = one_to_one::Connections::default();
         let connections = warp::any().map(move || connections.clone());
@@ -71,13 +73,14 @@ async fn main() {
             })
     };
 
-    let routes = one_to_one_signaling
+    let routes = health
+        .or(one_to_one_signaling)
         .or(one_to_many_signaling)
         .or(many_to_many_signaling);
 
     let address = env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:9001".to_string());
+        .unwrap_or_else(|| "0.0.0.0:9001".to_string());
     let address = SocketAddr::from_str(&address).expect("invalid IP address provided");
 
     warp::serve(routes).run(address).await;
