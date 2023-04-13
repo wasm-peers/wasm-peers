@@ -128,11 +128,14 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-      - uses: Swatinem/rust-cache@v1
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+      - name: Cache deps
+        uses: Swatinem/rust-cache@v1
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
         with:
-          args: '--all-features --workspace --ignore-tests --out Lcov'
+          tool: cargo-tarpaulin
+      - name: Run cargo-tarpaulin
+        run: cargo tarpaulin --all-features --workspace --ignore-tests --out Lcov
       - name: Upload to Coveralls
         # upload only if push
         if: ${{ github.event_name == 'push' }}
