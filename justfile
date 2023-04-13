@@ -1,5 +1,8 @@
 #!/usr/bin/env just --justfile
-set dotenv-load := true
+set dotenv-load
+set export
+
+AWS_PUBLIC_ECR_ACCOUNT_URI := "public.ecr.aws/f1v1j4j7"
 
 list:
     @just --list
@@ -11,7 +14,7 @@ fmt *FLAGS:
     cargo +nightly fmt {{FLAGS}}
 
 check *FLAGS:
-    cargo clippy --tests --examples {{FLAGS}}
+    cargo clippy --all-targets --all-features --workspace {{FLAGS}}
 
 test *FLAGS:
     @just run-signaling-server
@@ -22,6 +25,22 @@ test *FLAGS:
 
 run-signaling-server:
     cd ./signaling-server && cargo run &
+
+publish-docker TAG:
+    docker login
+    docker build -t wasm-peers/signaling-server .
+    docker tag wasm-peers/signaling-server tomkarw/wasm-peers-signaling-server:{{TAG}}
+    docker tag wasm-peers/signaling-server tomkarw/wasm-peers-signaling-server:latest
+    docker push tomkarw/wasm-peers-signaling-server:{{TAG}}
+    docker push tomkarw/wasm-peers-signaling-server:latest
+
+publish-aws TAG:
+    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_PUBLIC_ECR_ACCOUNT_URI
+    docker build -t wasm-peers/signaling-server .
+    docker tag wasm-peers/signaling-server $AWS_PUBLIC_ECR_ACCOUNT_URI/wasm-peers/signaling-server:{{TAG}}
+    docker tag wasm-peers/signaling-server $AWS_PUBLIC_ECR_ACCOUNT_URI/wasm-peers/signaling-server:latest
+    docker push $AWS_PUBLIC_ECR_ACCOUNT_URI/wasm-peers/signaling-server:{{TAG}}
+    docker push $AWS_PUBLIC_ECR_ACCOUNT_URI/wasm-peers/signaling-server:latest
 
 pre-commit:
     @just fmt
