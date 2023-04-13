@@ -110,7 +110,7 @@ async fn user_message(
                                     SignalMessage::SessionReady(session_id.clone(), sender_id);
                                 let host_response = serde_json::to_string(&host_response)?;
                                 host_tx
-                                    .send(Message::text(&host_response))
+                                    .send(Message::text(host_response))
                                     .expect("failed to send SessionReady message to host");
                             }
                         }
