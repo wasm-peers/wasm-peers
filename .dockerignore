@@ -1,0 +1,10 @@
+.github
+.idea
+.vs
+
+
+pkg
+dist
+target
+
+justfile
