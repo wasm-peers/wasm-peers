@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -6,41 +5,35 @@ use serde::{Deserialize, Serialize};
 
 /// Unique identifier of signaling session that each user provides
 /// when communicating with the signaling server.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
-pub struct SessionId(String);
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize, Hash)]
+pub struct SessionId(u128);
 
 impl SessionId {
     /// Wrap String into a `SessionId` `struct`
     #[must_use]
-    pub const fn new(inner: String) -> Self {
+    pub const fn new(inner: u128) -> Self {
         Self(inner)
-    }
-
-    /// Return reference to the underling string
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
     }
 
     /// Acquire the underlying type
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
-    pub fn into_inner(self) -> String {
+    pub fn inner(&self) -> u128 {
         self.0
     }
 }
 
 impl FromStr for SessionId {
-    type Err = Infallible;
+    type Err = <u128 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.to_owned()))
+        Ok(Self(s.parse()?))
     }
 }
 
 impl Display for SessionId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "SessionId({})", self.0)
     }
 }
 

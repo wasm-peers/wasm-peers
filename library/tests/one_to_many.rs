@@ -18,7 +18,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn network_manager_starts_successfully() {
     let mut server = MiniServer::new(
         SIGNALING_SERVER_URL,
-        SessionId::new("dummy-session-id".to_string()),
+        SessionId::new(1234),
         ConnectionType::Local,
     )
     .unwrap();
@@ -32,7 +32,7 @@ fn single_message_passes_both_ways() {
 
     let mut server = MiniServer::new(
         SIGNALING_SERVER_URL,
-        SessionId::new("dummy-session-id".to_string()),
+        SessionId::new(1234),
         ConnectionType::Local,
     )
     .unwrap();
@@ -65,7 +65,7 @@ fn single_message_passes_both_ways() {
     let client_generator = || {
         let mut client = MiniClient::new(
             SIGNALING_SERVER_URL,
-            SessionId::new("dummy-session-id".to_string()),
+            SessionId::new(1234),
             ConnectionType::Local,
         )
         .unwrap();

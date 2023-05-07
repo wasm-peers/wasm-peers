@@ -24,7 +24,7 @@ pub async fn handle_websocket_message(
             info!("peer received info that session is ready {:?}", session_id);
             if is_host {
                 let offer = create_sdp_offer(&peer_connection).await?;
-                let signal_message = SignalMessage::SdpOffer(session_id.clone(), offer);
+                let signal_message = SignalMessage::SdpOffer(session_id, offer);
                 let signal_message = serde_json_wasm::to_string(&signal_message)?;
                 websocket.send_with_str(&signal_message).map_err(|err| {
                     anyhow!("failed to send message across the websocket: {:?}", err)

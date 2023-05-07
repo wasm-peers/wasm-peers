@@ -164,7 +164,7 @@ impl NetworkManager {
         on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
     ) {
         let websocket = self.inner.borrow().websocket.clone();
-        let session_id = self.inner.borrow().session_id.clone();
+        let session_id = self.inner.borrow().session_id;
         let is_host = self.inner.borrow().is_host;
 
         set_websocket_on_open(&websocket, session_id, is_host);

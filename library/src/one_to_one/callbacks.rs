@@ -78,7 +78,7 @@ pub fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId) {
     {
         let websocket_clone = websocket.clone();
         let on_open_callback: Box<dyn FnMut(JsValue)> = Box::new(move |_| {
-            let signal_message = SignalMessage::SessionJoin(session_id.clone());
+            let signal_message = SignalMessage::SessionJoin(session_id);
             let signal_message = serde_json_wasm::to_string(&signal_message)
                 .expect("failed serializing SignalMessage");
             websocket_clone
@@ -170,7 +170,7 @@ pub fn set_peer_connection_on_ice_candidate(
                 debug!("signaled candidate: {:#?}", signaled_candidate);
 
                 let signal_message =
-                    SignalMessage::IceCandidate(session_id_clone.clone(), signaled_candidate);
+                    SignalMessage::IceCandidate(session_id_clone, signaled_candidate);
                 let signal_message = serde_json_wasm::to_string(&signal_message)
                     .expect("failed to serialize SignalMessage");
 

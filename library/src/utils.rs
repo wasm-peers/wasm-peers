@@ -10,7 +10,7 @@ use web_sys::{RtcConfiguration, RtcPeerConnection, RtcSdpType, RtcSessionDescrip
 /// Returns a new `SessionId` instance that can be used to identify a session by signaling server.
 #[must_use]
 pub fn get_random_session_id() -> SessionId {
-    SessionId::new(uuid::Uuid::new_v4().to_string())
+    SessionId::new(uuid::Uuid::new_v4().as_u128())
 }
 
 /// Specifies what kind of peer connection to create
