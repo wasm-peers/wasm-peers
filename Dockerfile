@@ -1,4 +1,4 @@
-FROM rust:1.68.2 AS chef
+FROM rust:1.69.0 AS chef
 RUN cargo install cargo-chef
 WORKDIR /usr/src/signaling-server
 
