@@ -134,7 +134,8 @@ async fn session_join(
     user_id: UserId,
     session_id: SessionId,
 ) -> crate::Result<()> {
-    match sessions.write().await.entry(session_id.clone()) {
+    let mut sessions = sessions.write().await;
+    match sessions.entry(session_id.clone()) {
         // on first user in session - create session object and store connecting user id
         Entry::Vacant(entry) => {
             entry.insert(Session {
@@ -205,8 +206,11 @@ async fn sdp_offer(
 }
 
 async fn user_disconnected(user_id: UserId, connections: &Connections, sessions: &Sessions) {
+    connections.write().await.remove(&user_id);
+
+    let mut sessions = sessions.write().await;
     let mut session_to_delete = None;
-    for (session_id, session) in sessions.write().await.iter_mut() {
+    for (session_id, session) in sessions.iter_mut() {
         if session.first == Some(user_id) {
             session.first = None;
             if session.first.is_none() && session.second.is_none() {
@@ -223,7 +227,6 @@ async fn user_disconnected(user_id: UserId, connections: &Connections, sessions:
     }
     // remove session if it's empty
     if let Some(session_id) = session_to_delete {
-        sessions.write().await.remove(&session_id);
+        sessions.remove(&session_id);
     }
-    connections.write().await.remove(&user_id);
 }
