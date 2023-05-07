@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -19,7 +19,7 @@ pub struct Session {
 pub type Connections = Arc<RwLock<HashMap<UserId, mpsc::UnboundedSender<Message>>>>;
 pub type Sessions = Arc<RwLock<HashMap<SessionId, Session>>>;
 
-static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
+static NEXT_USER_ID: AtomicU64 = AtomicU64::new(1);
 
 pub async fn user_connected(ws: WebSocket, connections: Connections, sessions: Sessions) {
     let user_id = UserId::new(NEXT_USER_ID.fetch_add(1, Ordering::Relaxed));

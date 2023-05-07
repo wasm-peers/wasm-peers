@@ -1,6 +1,5 @@
 use std::convert::Infallible;
 use std::fmt::{Display, Formatter};
-use std::ops::Deref;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -48,25 +47,25 @@ impl Display for SessionId {
 /// Unique identifier of each peer connected to signaling server
 /// useful when communicating in one-to-many and many-to-many .
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
-pub struct UserId(usize);
+pub struct UserId(u64);
 
 impl UserId {
-    /// Wrap `usize` into a `UserId` `struct`
+    /// Wrap `u64` into a `UserId` `struct`
     #[must_use]
-    pub const fn new(inner: usize) -> Self {
+    pub const fn new(inner: u64) -> Self {
         Self(inner)
     }
 
     /// Acquire the underlying type
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
-    pub fn into_inner(self) -> usize {
+    pub fn into_inner(self) -> u64 {
         self.0
     }
 }
 
-impl From<usize> for UserId {
-    fn from(val: usize) -> Self {
+impl From<u64> for UserId {
+    fn from(val: u64) -> Self {
         Self(val)
     }
 }
@@ -74,14 +73,6 @@ impl From<usize> for UserId {
 impl Display for UserId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-impl Deref for UserId {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
