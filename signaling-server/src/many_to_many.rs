@@ -141,7 +141,8 @@ async fn user_disconnected(user_id: UserId, connections: &Connections, sessions:
     connections.write().await.remove(&user_id);
 
     let mut session_to_delete = None;
-    for (session_id, session) in sessions.write().await.iter_mut() {
+    let mut sessions = sessions.write().await;
+    for (session_id, session) in sessions.iter_mut() {
         if session.users.contains(&user_id) {
             session.users.remove(&user_id);
         }
@@ -152,6 +153,6 @@ async fn user_disconnected(user_id: UserId, connections: &Connections, sessions:
     }
     // remove session if it's empty
     if let Some(session_id) = session_to_delete {
-        sessions.write().await.remove(&session_id);
+        sessions.remove(&session_id);
     }
 }
