@@ -1,6 +1,7 @@
+# wasm-peers
+
 <img style="display: block; margin-left: auto; margin-right: auto" src="logo.png" alt="wasm-peers logo">
 
-# wasm-peers
 [![crates.io](https://img.shields.io/crates/v/wasm_peers.svg)](https://crates.io/crates/wasm_peers)
 [![docs.rs](https://img.shields.io/docsrs/wasm-peers)](https://docs.rs/wasm_peers)
 [![crates.io](https://img.shields.io/crates/d/wasm_peers.svg)](https://crates.io/crates/wasm_peers)
@@ -25,7 +26,6 @@ After that you can send messages back and forth without worrying about the imple
 Library contains three network topologies, `one-to-one`, which creates an equal connection between two peers,
 `one-to-many`, which specifies a host and arbitrary number of clients
 and `many-to-many` that creates connection for each pair of peers and allows sending messages to any of them.
-
 
 For a "production ready" apps built with this
 library check out either [Live Document](https://github.com/wasm-peers/live-document#readme) or [Footballers](https://github.com/wasm-peers/footballers#readme).
@@ -77,9 +77,11 @@ fn main() {
     peer2.start(peer2_on_open, peer2_on_message).unwrap();
 }
 ```
+
 For examples of other topologies check out the [docs](https://docs.rs/wasm-peers/latest/wasm_peers/).
 
 ## Roadmap
+
 - [ ] Add tests
 - [ ] Improve error handling
 - [ ] Introduce alternative API with futures
@@ -87,23 +89,22 @@ For examples of other topologies check out the [docs](https://docs.rs/wasm-peers
 
 ## Version History
 
-* 0.4
-    * MiniServer callbacks don't accept UserId argument now (it'd always be hosts)
-    * Fix documentation tests so that they compile
-* 0.3
-    * Initial release to the public
-
+- 0.4
+  - MiniServer callbacks don't accept UserId argument now (it'd always be hosts)
+  - Fix documentation tests so that they compile
+- 0.3
+  - Initial release to the public
 
 ## Similar projects
 
-* [matchbox](https://github.com/johanhelsing/matchbox#readme)
+- [matchbox](https://github.com/johanhelsing/matchbox#readme)
 
 ## License
 
 This project is licensed under either of
 
-* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 ## Contribution
 
@@ -119,7 +120,7 @@ Tomasz Karwowski
 
 These projects helped me grasp WebRTC in Rust:
 
-* [Yew WebRTC Chat](https://github.com/codec-abc/Yew-WebRTC-Chat)
-* [WebRTC in Rust](https://github.com/Charles-Schleich/WebRTC-in-Rust)
+- [Yew WebRTC Chat](https://github.com/codec-abc/Yew-WebRTC-Chat)
+- [WebRTC in Rust](https://github.com/Charles-Schleich/WebRTC-in-Rust)
 
 Also, special thanks to the guys with whom I did my B.Eng. thesis.
