@@ -5,6 +5,7 @@ to facilitate communication in many-to-many topology.
 
 use serde::{Deserialize, Serialize};
 
+use crate::common::IceCandidate;
 use crate::{SessionId, UserId};
 
 /// `Enum` consisting of two main categories are messages used to setup signaling session
@@ -25,7 +26,7 @@ pub enum SignalMessage {
     SdpAnswer(SessionId, UserId, String),
 
     /// Proposed ICE Candidate of one user passed to the other user without modifications
-    IceCandidate(SessionId, UserId, String),
+    IceCandidate(SessionId, UserId, IceCandidate),
 
     /// Generic error containing detailed information about the cause
     Error(SessionId, String),

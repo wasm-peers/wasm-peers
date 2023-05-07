@@ -71,4 +71,4 @@ pub mod many_to_many;
 pub mod one_to_many;
 pub mod one_to_one;
 
-pub use common::{IsHost, SessionId, UserId};
+pub use common::{IceCandidate, IsHost, SessionId, UserId};

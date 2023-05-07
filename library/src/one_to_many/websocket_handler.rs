@@ -16,7 +16,6 @@ use crate::one_to_many::{Connection, NetworkManager};
 use crate::utils::{
     create_peer_connection, create_sdp_answer, create_sdp_offer,
     set_peer_connection_on_ice_gathering_state_change, set_peer_connection_on_negotiation_needed,
-    IceCandidate,
 };
 
 /// Basically a finite state machine spread across host, client and signaling server
@@ -97,9 +96,7 @@ pub async fn handle_websocket_message(
                         &user_id
                     )
                 })?;
-            debug!("peer received ice candidate: {}", &ice_candidate);
-            // TODO(tkarwowski): IceCandidate should already be struct inside signal message
-            let ice_candidate = serde_json_wasm::from_str::<IceCandidate>(&ice_candidate)?;
+            debug!("peer received ice candidate: {:?}", &ice_candidate);
 
             let mut rtc_candidate = RtcIceCandidateInit::new("");
             rtc_candidate.candidate(&ice_candidate.candidate);

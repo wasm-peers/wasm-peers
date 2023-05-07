@@ -3,14 +3,13 @@ use log::{debug, error, info};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_peers_protocol::one_to_many::SignalMessage;
-use wasm_peers_protocol::{SessionId, UserId};
+use wasm_peers_protocol::{IceCandidate, SessionId, UserId};
 use web_sys::{
     MessageEvent, RtcDataChannel, RtcDataChannelEvent, RtcPeerConnection,
     RtcPeerConnectionIceEvent, WebSocket,
 };
 
 use crate::one_to_many::{websocket_handler, NetworkManager};
-use crate::utils::IceCandidate;
 
 /// Also calls:
 /// * `set_data_channel_on_open`
@@ -202,8 +201,6 @@ pub fn set_peer_connection_on_ice_candidate(
                     sdp_m_line_index: candidate.sdp_m_line_index(),
                 };
                 debug!("signaled candidate: {:#?}", signaled_candidate);
-                let signaled_candidate = serde_json_wasm::to_string(&signaled_candidate)
-                    .expect("failed to serialize IceCandidate");
 
                 let signal_message = SignalMessage::IceCandidate(
                     session_id_clone.clone(),
