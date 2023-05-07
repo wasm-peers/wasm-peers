@@ -3,11 +3,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use log::{error, info, warn};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use warp::ws::{Message, WebSocket};
 use wasm_peers_protocol::one_to_many::SignalMessage;
 use wasm_peers_protocol::{SessionId, UserId};
 
@@ -65,7 +65,7 @@ async fn user_message(
     connections: &Connections,
     sessions: &Sessions,
 ) -> crate::Result<()> {
-    if let Ok(msg) = msg.to_str() {
+    if let Ok(msg) = msg.to_text() {
         match serde_json::from_str::<SignalMessage>(msg) {
             Ok(request) => {
                 info!("message received from user {:?}: {:?}", sender_id, request);
@@ -87,7 +87,7 @@ async fn user_message(
                                     SignalMessage::SessionReady(session_id.clone(), *client_id);
                                 let host_response = serde_json::to_string(&host_response)?;
                                 host_tx
-                                    .send(Message::text(&host_response))
+                                    .send(Message::Text(host_response))
                                     .expect("failed to send SessionReady message to host");
                             }
                         }
@@ -99,7 +99,7 @@ async fn user_message(
                         let response = serde_json::to_string(&response)?;
                         let connections_reader = connections.read().await;
                         if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::text(response))?;
+                            recipient_tx.send(Message::Text(response))?;
                         } else {
                             warn!("tried to send offer to non existing user");
                         }
@@ -110,7 +110,7 @@ async fn user_message(
                         let response = serde_json::to_string(&response)?;
                         let connections_reader = connections.read().await;
                         if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::text(response))?;
+                            recipient_tx.send(Message::Text(response))?;
                         } else {
                             warn!("tried to send offer to non existing user");
                         }
@@ -124,7 +124,7 @@ async fn user_message(
                             .get(&recipient_id)
                             .ok_or_else(|| anyhow!("no sender for given id"))?;
 
-                        recipient_tx.send(Message::text(response))?;
+                        recipient_tx.send(Message::Text(response))?;
                     }
                     _ => {}
                 }
