@@ -4,11 +4,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use log::{error, info};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use warp::ws::{Message, WebSocket};
 use wasm_peers_protocol::one_to_one::SignalMessage;
 use wasm_peers_protocol::{SessionId, UserId};
 
@@ -68,7 +68,7 @@ async fn user_message(
     sessions: &Sessions,
 ) -> crate::Result<()> {
     let msg = msg
-        .to_str()
+        .to_text()
         .map_err(|_err| anyhow!("websocket message is not text"))?;
     let request = serde_json::from_str::<SignalMessage>(msg)?;
     info!("message received from user {:?}: {:?}", user_id, request);
@@ -99,7 +99,7 @@ async fn user_message(
                 .get(&recipient_id)
                 .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
 
-            recipient_tx.send(Message::text(response))?;
+            recipient_tx.send(Message::Text(response))?;
         }
         SignalMessage::IceCandidate(session_id, candidate) => {
             let sessions = sessions.read().await;
@@ -119,7 +119,7 @@ async fn user_message(
                 .get(&recipient_id)
                 .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
 
-            recipient_tx.send(Message::text(response))?;
+            recipient_tx.send(Message::Text(response))?;
         }
         other => {
             error!("received unexpected signal message: {:?}", other);
@@ -157,11 +157,11 @@ async fn session_join(
                 let first_tx = connections_reader
                     .get(&first_id)
                     .ok_or_else(|| anyhow!("no sender for given id"))?;
-                first_tx.send(Message::text(first_response))?;
+                first_tx.send(Message::Text(first_response))?;
                 let second_tx = connections_reader
                     .get(&user_id)
                     .ok_or_else(|| anyhow!("no sender for given id"))?;
-                second_tx.send(Message::text(&second_response))?;
+                second_tx.send(Message::Text(second_response))?;
             }
         }
     }
@@ -201,7 +201,7 @@ async fn sdp_offer(
         .get(&recipient_id)
         .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
 
-    recipient_tx.send(Message::text(response))?;
+    recipient_tx.send(Message::Text(response))?;
     Ok(())
 }
 
