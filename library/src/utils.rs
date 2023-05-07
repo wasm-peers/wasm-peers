@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use js_sys::{Array, Object, Reflect};
 use log::debug;
-use serde::{Deserialize, Serialize};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
@@ -12,13 +11,6 @@ use web_sys::{RtcConfiguration, RtcPeerConnection, RtcSdpType, RtcSessionDescrip
 #[must_use]
 pub fn get_random_session_id() -> SessionId {
     SessionId::new(uuid::Uuid::new_v4().to_string())
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct IceCandidate {
-    pub candidate: String,
-    pub sdp_mid: Option<String>,
-    pub sdp_m_line_index: Option<u16>,
 }
 
 /// Specifies what kind of peer connection to create

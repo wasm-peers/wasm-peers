@@ -79,3 +79,10 @@ impl Display for UserId {
 /// Unique identifier specifying which peer is host and will be creating an offer,
 /// and which will await it.
 pub type IsHost = bool;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IceCandidate {
+    pub candidate: String,
+    pub sdp_mid: Option<String>,
+    pub sdp_m_line_index: Option<u16>,
+}
