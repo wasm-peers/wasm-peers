@@ -135,7 +135,7 @@ async fn session_join(
     session_id: SessionId,
 ) -> crate::Result<()> {
     let mut sessions = sessions.write().await;
-    match sessions.entry(session_id.clone()) {
+    match sessions.entry(session_id) {
         // on first user in session - create session object and store connecting user id
         Entry::Vacant(entry) => {
             entry.insert(Session {
@@ -147,7 +147,7 @@ async fn session_join(
         // on second user - add him to existing session and notify users that session is ready
         Entry::Occupied(mut entry) => {
             entry.get_mut().second = Some(user_id);
-            let first_response = SignalMessage::SessionReady(session_id.clone(), true);
+            let first_response = SignalMessage::SessionReady(session_id, true);
             let first_response = serde_json::to_string(&first_response)?;
             let second_response = SignalMessage::SessionReady(session_id, false);
             let second_response = serde_json::to_string(&second_response)?;
@@ -214,13 +214,13 @@ async fn user_disconnected(user_id: UserId, connections: &Connections, sessions:
         if session.first == Some(user_id) {
             session.first = None;
             if session.first.is_none() && session.second.is_none() {
-                session_to_delete = Some(session_id.clone());
+                session_to_delete = Some(*session_id);
             }
             break;
         } else if session.second == Some(user_id) {
             session.second = None;
             if session.first.is_none() && session.second.is_none() {
-                session_to_delete = Some(session_id.clone());
+                session_to_delete = Some(*session_id);
             }
             break;
         }

@@ -149,7 +149,7 @@ impl NetworkManager {
             ..
         } = self.inner.borrow().clone();
 
-        let data_channel = peer_connection.create_data_channel(&session_id.clone().into_inner());
+        let data_channel = peer_connection.create_data_channel(&session_id.to_string());
         debug!(
             "data_channel created with label: {:?}",
             data_channel.label()
@@ -167,11 +167,7 @@ impl NetworkManager {
             on_message_callback,
         );
 
-        set_peer_connection_on_ice_candidate(
-            &peer_connection,
-            websocket.clone(),
-            session_id.clone(),
-        );
+        set_peer_connection_on_ice_candidate(&peer_connection, websocket.clone(), session_id);
         set_peer_connection_on_ice_connection_state_change(&peer_connection);
         set_peer_connection_on_ice_gathering_state_change(&peer_connection);
         set_peer_connection_on_negotiation_needed(&peer_connection);

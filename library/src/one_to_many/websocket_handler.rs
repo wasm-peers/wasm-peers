@@ -149,12 +149,7 @@ async fn session_ready(
         on_open_callback.clone(),
         on_message_callback.clone(),
     );
-    set_peer_connection_on_ice_candidate(
-        &peer_connection,
-        peer_id,
-        websocket.clone(),
-        session_id.clone(),
-    );
+    set_peer_connection_on_ice_candidate(&peer_connection, peer_id, websocket.clone(), session_id);
     set_peer_connection_on_ice_connection_state_change(&peer_connection);
     set_peer_connection_on_ice_gathering_state_change(&peer_connection);
     set_peer_connection_on_negotiation_needed(&peer_connection);
@@ -201,12 +196,7 @@ async fn sdp_offer(
         on_open_callback.clone(),
         on_message_callback.clone(),
     );
-    set_peer_connection_on_ice_candidate(
-        &peer_connection,
-        peer_id,
-        websocket.clone(),
-        session_id.clone(),
-    );
+    set_peer_connection_on_ice_candidate(&peer_connection, peer_id, websocket.clone(), session_id);
     set_peer_connection_on_ice_connection_state_change(&peer_connection);
     set_peer_connection_on_ice_gathering_state_change(&peer_connection);
     set_peer_connection_on_negotiation_needed(&peer_connection);

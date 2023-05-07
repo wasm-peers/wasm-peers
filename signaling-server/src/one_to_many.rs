@@ -74,7 +74,7 @@ async fn user_message(
                     SignalMessage::SessionJoin(session_id, is_host) => {
                         let mut sessions_writer = sessions.write().await;
                         let session = sessions_writer
-                            .entry(session_id.clone())
+                            .entry(session_id)
                             .or_insert_with(Session::default);
                         let connections_reader = connections.read().await;
 
@@ -87,7 +87,7 @@ async fn user_message(
                                         .get(&sender_id)
                                         .expect("host not in connections");
                                     let host_response =
-                                        SignalMessage::SessionReady(session_id.clone(), *client_id);
+                                        SignalMessage::SessionReady(session_id, *client_id);
                                     let host_response = serde_json::to_string(&host_response)?;
                                     host_tx
                                         .send(Message::Text(host_response))
@@ -107,7 +107,7 @@ async fn user_message(
                                     .get(&host_id)
                                     .expect("host not in connections");
                                 let host_response =
-                                    SignalMessage::SessionReady(session_id.clone(), sender_id);
+                                    SignalMessage::SessionReady(session_id, sender_id);
                                 let host_response = serde_json::to_string(&host_response)?;
                                 host_tx
                                     .send(Message::Text(host_response))
@@ -170,7 +170,7 @@ async fn user_disconnected(user_id: UserId, connections: &Connections, sessions:
             session.users.remove(&user_id);
         }
         if session.host.is_none() && session.users.is_empty() {
-            session_to_delete = Some(session_id.clone());
+            session_to_delete = Some(*session_id);
             break;
         }
     }

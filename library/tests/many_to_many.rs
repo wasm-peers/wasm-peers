@@ -18,7 +18,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn network_manager_starts_successfully() {
     let mut server = NetworkManager::new(
         SIGNALING_SERVER_URL,
-        SessionId::new("dummy-session-id".to_string()),
+        SessionId::new(1234),
         ConnectionType::Local,
     )
     .unwrap();
@@ -33,7 +33,7 @@ fn single_message_passes_between_all() {
     let peer_generator = || {
         let mut server = NetworkManager::new(
             SIGNALING_SERVER_URL,
-            SessionId::new("dummy-session-id".to_string()),
+            SessionId::new(1234),
             ConnectionType::Local,
         )
         .unwrap();
