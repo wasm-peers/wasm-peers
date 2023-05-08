@@ -67,10 +67,7 @@ async fn user_message(
     connections: &Connections,
     sessions: &Sessions,
 ) -> crate::Result<()> {
-    let msg = msg
-        .to_text()
-        .map_err(|_err| anyhow!("websocket message is not text"))?;
-    let request = serde_json::from_str::<SignalMessage>(msg)?;
+    let request = rmp_serde::from_slice::<SignalMessage>(msg.into_data().as_ref())?;
     info!("message received from user {:?}: {:?}", user_id, request);
     match request {
         SignalMessage::SessionJoin(session_id) => {
@@ -93,13 +90,12 @@ async fn user_message(
             }
             .ok_or_else(|| anyhow!("missing second user in session: {:?}", &session_id))?;
             let response = SignalMessage::SdpAnswer(session_id, answer);
-            let response = serde_json::to_string(&response)?;
+            let response = rmp_serde::to_vec(&response)?;
             let connections_reader = connections.read().await;
-            let recipient_tx = connections_reader
+            connections_reader
                 .get(&recipient_id)
-                .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
-
-            recipient_tx.send(Message::Text(response))?;
+                .ok_or_else(|| anyhow!("no sender for given recipient_id"))?
+                .send(Message::Binary(response))?;
         }
         SignalMessage::IceCandidate(session_id, candidate) => {
             let sessions = sessions.read().await;
@@ -113,13 +109,12 @@ async fn user_message(
             }
             .ok_or_else(|| anyhow!("missing second user in session: {:?}", &session_id))?;
             let response = SignalMessage::IceCandidate(session_id, candidate);
-            let response = serde_json::to_string(&response)?;
+            let response = rmp_serde::to_vec(&response)?;
             let connections_reader = connections.read().await;
-            let recipient_tx = connections_reader
+            connections_reader
                 .get(&recipient_id)
-                .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
-
-            recipient_tx.send(Message::Text(response))?;
+                .ok_or_else(|| anyhow!("no sender for given recipient_id"))?
+                .send(Message::Binary(response))?;
         }
         other => {
             error!("received unexpected signal message: {:?}", other);
@@ -148,20 +143,20 @@ async fn session_join(
         Entry::Occupied(mut entry) => {
             entry.get_mut().second = Some(user_id);
             let first_response = SignalMessage::SessionReady(session_id, true);
-            let first_response = serde_json::to_string(&first_response)?;
+            let first_response = rmp_serde::to_vec(&first_response)?;
             let second_response = SignalMessage::SessionReady(session_id, false);
-            let second_response = serde_json::to_string(&second_response)?;
+            let second_response = rmp_serde::to_vec(&second_response)?;
 
             let connections_reader = connections.read().await;
             if let Some(first_id) = entry.get().first {
-                let first_tx = connections_reader
+                connections_reader
                     .get(&first_id)
-                    .ok_or_else(|| anyhow!("no sender for given id"))?;
-                first_tx.send(Message::Text(first_response))?;
-                let second_tx = connections_reader
+                    .ok_or_else(|| anyhow!("no sender for given id"))?
+                    .send(Message::Binary(first_response))?;
+                connections_reader
                     .get(&user_id)
-                    .ok_or_else(|| anyhow!("no sender for given id"))?;
-                second_tx.send(Message::Text(second_response))?;
+                    .ok_or_else(|| anyhow!("no sender for given id"))?
+                    .send(Message::Binary(second_response))?;
             }
         }
     }
@@ -195,13 +190,12 @@ async fn sdp_offer(
     }
     .ok_or_else(|| anyhow!("missing second user in session: {:?}", &session_id))?;
     let response = SignalMessage::SdpOffer(session_id, offer);
-    let response = serde_json::to_string(&response)?;
+    let response = rmp_serde::to_vec(&response)?;
     let connections_reader = connections.read().await;
-    let recipient_tx = connections_reader
+    connections_reader
         .get(&recipient_id)
-        .ok_or_else(|| anyhow!("no sender for given recipient_id"))?;
-
-    recipient_tx.send(Message::Text(response))?;
+        .ok_or_else(|| anyhow!("no sender for given recipient_id"))?
+        .send(Message::Binary(response))?;
     Ok(())
 }
 

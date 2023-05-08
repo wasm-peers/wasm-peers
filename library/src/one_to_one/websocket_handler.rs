@@ -25,10 +25,12 @@ pub async fn handle_websocket_message(
             if is_host {
                 let offer = create_sdp_offer(&peer_connection).await?;
                 let signal_message = SignalMessage::SdpOffer(session_id, offer);
-                let signal_message = serde_json_wasm::to_string(&signal_message)?;
-                websocket.send_with_str(&signal_message).map_err(|err| {
-                    anyhow!("failed to send message across the websocket: {:?}", err)
-                })?;
+                let signal_message = rmp_serde::to_vec(&signal_message)?;
+                websocket
+                    .send_with_u8_array(&signal_message)
+                    .map_err(|err| {
+                        anyhow!("failed to send message across the websocket: {:?}", err)
+                    })?;
                 debug!("(is_host: {}) sent an offer successfully", is_host);
             }
         }
@@ -36,8 +38,8 @@ pub async fn handle_websocket_message(
             let answer = create_sdp_answer(&peer_connection, offer).await?;
             debug!("received an offer and created an answer: {}", answer);
             let signal_message = SignalMessage::SdpAnswer(session_id, answer);
-            let signal_message = serde_json_wasm::to_string(&signal_message)?;
-            if let Err(err) = websocket.send_with_str(&signal_message) {
+            let signal_message = rmp_serde::to_vec(&signal_message)?;
+            if let Err(err) = websocket.send_with_u8_array(&signal_message) {
                 error!("failed to send signal message: {:?}", err);
             }
         }

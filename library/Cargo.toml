@@ -16,7 +16,12 @@ readme = "../README.md"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["one-to-one", "one-to-many", "many-to-many", "console_error_panic_hook"]
+default = [
+    "one-to-one",
+    "one-to-many",
+    "many-to-many",
+    "console_error_panic_hook",
+]
 one-to-one = []
 one-to-many = []
 many-to-many = ["one-to-many"]
@@ -26,13 +31,14 @@ console_error_panic_hook = { version = "0.1", optional = true }
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 serde = { version = "1.0", features = ["derive"] }
-serde-json-wasm = "0.4.1"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 log = "0.4"
 uuid = { version = "1", features = ["v4", "js"] }
 
 wasm-peers-protocol = { path = "../protocol", version = "0.3" }
 anyhow = "1"
+rmp = "0.8.11"
+rmp-serde = "1.1.1"
 
 [dependencies.web-sys]
 version = "0.3.22"
@@ -51,6 +57,7 @@ features = [
     "RtcIceCandidateInit",
     "RtcDataChannel",
     "RtcDataChannelEvent",
+    "RtcDataChannelInit",
     "RtcConfiguration",
     "RtcIceGatheringState",
 

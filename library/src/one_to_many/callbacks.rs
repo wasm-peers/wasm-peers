@@ -1,5 +1,6 @@
-use js_sys::JsString;
+use js_sys::Uint8Array;
 use log::{debug, error, info};
+use serde::de::DeserializeOwned;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_peers_protocol::one_to_many::SignalMessage;
@@ -15,12 +16,12 @@ use crate::one_to_many::{websocket_handler, NetworkManager};
 /// * `set_data_channel_on_open`
 /// * `set_data_channel_on_message`
 /// * `set_data_channel_on_error`
-pub fn set_peer_connection_on_data_channel(
+pub fn set_peer_connection_on_data_channel<T: DeserializeOwned>(
     peer_connection: &RtcPeerConnection,
     client_id: UserId,
     network_manager: NetworkManager,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
-    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
 ) {
     let on_open_callback_clone = on_open_callback;
     let on_message_callback_clone = on_message_callback;
@@ -54,47 +55,45 @@ pub fn set_peer_connection_on_data_channel(
 }
 
 /// handle message sent by signaling server
-pub fn set_websocket_on_message(
+pub fn set_websocket_on_message<T: DeserializeOwned>(
     websocket: &WebSocket,
     network_manager: NetworkManager,
+    max_retransmits: u16,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
-    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     is_host: bool,
 ) {
     let on_message_callback = {
         let websocket = websocket.clone();
         let on_message_callback: Box<dyn FnMut(MessageEvent)> =
             Box::new(move |ev: MessageEvent| {
-                if let Ok(message) = ev.data().dyn_into::<JsString>() {
-                    match serde_json_wasm::from_str(&String::from(message)) {
-                        Ok(message) => {
-                            let network_manager = network_manager.clone();
-                            let websocket = websocket.clone();
-                            let on_open_callback_clone = on_open_callback.clone();
-                            let on_message_callback_clone = on_message_callback.clone();
-                            wasm_bindgen_futures::spawn_local(async move {
-                                if let Err(err) = websocket_handler::handle_websocket_message(
-                                    network_manager,
-                                    message,
-                                    websocket,
-                                    on_open_callback_clone,
-                                    on_message_callback_clone,
-                                    is_host,
-                                )
-                                .await
-                                {
-                                    error!("failed to handle websocket message: {}", err);
-                                }
-                            });
-                        }
-                        Err(err) => {
-                            error!(
-                                "failed to deserialize onmessage callback content: {:?}.",
-                                err
-                            );
-                        }
+                let Ok(message) = ev.data().dyn_into::<Uint8Array>().map(|v| v.to_vec()) else {
+                    error!("failed to convert message to Uint8Array");
+                    return;
+                };
+                let Ok(message) = rmp_serde::from_slice(message.as_slice()) else {
+                    error!("failed to deserialize message");
+                    return;
+                };
+                let network_manager = network_manager.clone();
+                let websocket = websocket.clone();
+                let on_open_callback_clone = on_open_callback.clone();
+                let on_message_callback_clone = on_message_callback.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    if let Err(err) = websocket_handler::handle_websocket_message(
+                        network_manager,
+                        message,
+                        websocket,
+                        max_retransmits,
+                        on_open_callback_clone,
+                        on_message_callback_clone,
+                        is_host,
+                    )
+                    .await
+                    {
+                        error!("failed to handle websocket message: {}", err);
                     }
-                }
+                });
             });
         Closure::wrap(on_message_callback)
     };
@@ -108,9 +107,9 @@ pub fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_ho
         let websocket = websocket.clone();
         let on_open_callback: Box<dyn FnMut(JsValue)> = Box::new(move |_| {
             let signal_message = SignalMessage::SessionJoin(session_id, is_host);
-            let signal_message = serde_json_wasm::to_string(&signal_message)
-                .expect("failed serializing SignalMessage");
-            if let Err(err) = websocket.send_with_str(&signal_message) {
+            let signal_message =
+                rmp_serde::to_vec(&signal_message).expect("failed serializing SignalMessage");
+            if let Err(err) = websocket.send_with_u8_array(&signal_message) {
                 error!("failed to send signal message: {:?}", err);
             }
         });
@@ -120,27 +119,16 @@ pub fn set_websocket_on_open(websocket: &WebSocket, session_id: SessionId, is_ho
     on_open_callback.forget();
 }
 
-pub fn set_data_channel_on_message(
+pub fn set_data_channel_on_message<T: DeserializeOwned>(
     data_channel: &RtcDataChannel,
     client_id: UserId,
-    mut on_message_callback: impl FnMut(UserId, String) + 'static,
+    mut on_message_callback: impl FnMut(UserId, T) + 'static,
 ) {
     let on_message_callback: Box<dyn FnMut(MessageEvent)> = Box::new(move |ev: MessageEvent| {
-        if let Some(message) = ev.data().as_string() {
-            debug!(
-                "message from datachannel (will call on_message): {:?}",
-                message
-            );
-            on_message_callback(
-                client_id,
-                message
-                    // this is an ugly fix to the fact, that if you send empty string as message
-                    // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-                    // message
-                    .strip_prefix('x')
-                    .expect("messages must have a fix-bug x prepended")
-                    .to_owned(),
-            );
+        let message = ev.data().dyn_into::<Uint8Array>().ok();
+        if let Some(message) = message.and_then(|t| rmp_serde::from_slice(&t.to_vec()).ok()) {
+            debug!("message from datachannel (will call on_message)");
+            on_message_callback(client_id, message);
         }
     });
     let on_message_callback = Closure::wrap(on_message_callback);
@@ -204,10 +192,10 @@ pub fn set_peer_connection_on_ice_candidate(
 
                 let signal_message =
                     SignalMessage::IceCandidate(session_id_clone, client_id, signaled_candidate);
-                let signal_message = serde_json_wasm::to_string(&signal_message)
-                    .expect("failed to serialize SignalMessage");
+                let signal_message =
+                    rmp_serde::to_vec(&signal_message).expect("failed to serialize SignalMessage");
 
-                if let Err(err) = websocket_clone.send_with_str(&signal_message) {
+                if let Err(err) = websocket_clone.send_with_u8_array(&signal_message) {
                     error!("failed to send one of the ICE candidates: {:?}", err);
                 }
             }

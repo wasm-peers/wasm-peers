@@ -1,10 +1,12 @@
 use anyhow::anyhow;
 use log::{debug, error, info};
+use serde::de::DeserializeOwned;
 use wasm_bindgen_futures::JsFuture;
 use wasm_peers_protocol::one_to_many::SignalMessage;
 use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{
-    RtcIceCandidate, RtcIceCandidateInit, RtcSdpType, RtcSessionDescriptionInit, WebSocket,
+    RtcDataChannelInit, RtcIceCandidate, RtcIceCandidateInit, RtcSdpType,
+    RtcSessionDescriptionInit, WebSocket,
 };
 
 use crate::one_to_many::callbacks::{
@@ -20,12 +22,13 @@ use crate::utils::{
 
 /// Basically a finite state machine spread across host, client and signaling server
 /// handling each step in session and then `WebRTC` setup.
-pub async fn handle_websocket_message(
+pub async fn handle_websocket_message<T: DeserializeOwned>(
     network_manager: NetworkManager,
     message: SignalMessage,
     websocket: WebSocket,
+    max_retransmits: u16,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
-    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     is_host: bool,
 ) -> crate::Result<()> {
     match message {
@@ -36,6 +39,7 @@ pub async fn handle_websocket_message(
             session_ready(
                 network_manager,
                 websocket,
+                max_retransmits,
                 on_open_callback,
                 on_message_callback,
                 is_host,
@@ -117,10 +121,10 @@ pub async fn handle_websocket_message(
             })?;
             debug!("added ice candidate {:?}", ice_candidate);
         }
-        SignalMessage::Error(session_id, error) => {
+        SignalMessage::Error(session_id, user_id, error) => {
             error!(
-                "signaling server returned error: session id: {:?}, error: {}",
-                session_id, error
+                "signaling server returned error: session id: {session_id:?}, user_id: \
+                 {user_id:?}, error: {error}",
             );
         }
     }
@@ -128,11 +132,13 @@ pub async fn handle_websocket_message(
     Ok(())
 }
 
-async fn session_ready(
+#[allow(clippy::too_many_arguments)]
+async fn session_ready<T: DeserializeOwned>(
     network_manager: NetworkManager,
     websocket: WebSocket,
+    max_retransmits: u16,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
-    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     is_host: bool,
     session_id: SessionId,
     peer_id: UserId,
@@ -154,16 +160,21 @@ async fn session_ready(
     set_peer_connection_on_ice_gathering_state_change(&peer_connection);
     set_peer_connection_on_negotiation_needed(&peer_connection);
 
-    let data_channel = peer_connection.create_data_channel(&format!("{}-{}", session_id, peer_id));
+    let mut init = RtcDataChannelInit::new();
+    init.max_retransmits(max_retransmits);
+    init.ordered(false);
+    let data_channel = peer_connection
+        .create_data_channel_with_data_channel_dict(&format!("{}-{}", session_id, peer_id), &init);
+
     set_data_channel_on_open(&data_channel, peer_id, on_open_callback.clone());
     set_data_channel_on_error(&data_channel);
     set_data_channel_on_message(&data_channel, peer_id, on_message_callback.clone());
 
     let offer = create_sdp_offer(&peer_connection).await?;
     let signal_message = SignalMessage::SdpOffer(session_id, peer_id, offer);
-    let signal_message = serde_json_wasm::to_string(&signal_message)?;
+    let signal_message = rmp_serde::to_vec(&signal_message)?;
     websocket
-        .send_with_str(&signal_message)
+        .send_with_u8_array(&signal_message)
         .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))?;
     network_manager.inner.borrow_mut().connections.insert(
         peer_id,
@@ -177,11 +188,11 @@ async fn session_ready(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn sdp_offer(
+async fn sdp_offer<T: DeserializeOwned>(
     network_manager: NetworkManager,
     websocket: WebSocket,
     on_open_callback: impl FnMut(UserId) + Clone + 'static,
-    on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+    on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     is_host: bool,
     session_id: SessionId,
     peer_id: UserId,
@@ -220,9 +231,9 @@ async fn sdp_offer(
     );
     let signal_message = SignalMessage::SdpAnswer(session_id, peer_id, answer);
     let signal_message =
-        serde_json_wasm::to_string(&signal_message).expect("failed to serialize SignalMessage");
+        rmp_serde::to_vec(&signal_message).expect("failed to serialize SignalMessage");
     websocket
-        .send_with_str(&signal_message)
+        .send_with_u8_array(&signal_message)
         .expect("failed to send SPD answer to signaling server");
     Ok(())
 }

@@ -65,73 +65,79 @@ async fn user_message(
     connections: &Connections,
     sessions: &Sessions,
 ) -> crate::Result<()> {
-    if let Ok(msg) = msg.to_text() {
-        match serde_json::from_str::<SignalMessage>(msg) {
-            Ok(request) => {
-                info!("message received from user {:?}: {:?}", sender_id, request);
-                match request {
-                    SignalMessage::SessionJoin(session_id, _) => {
-                        let mut sessions_writer = sessions.write().await;
-                        let session = sessions_writer
-                            .entry(session_id)
-                            .or_insert_with(Session::default);
-                        let connections_reader = connections.read().await;
+    let request = rmp_serde::from_slice::<SignalMessage>(msg.into_data().as_ref())?;
+    info!("message received from user {:?}: {:?}", sender_id, request);
+    match request {
+        SignalMessage::SessionJoin(session_id, _) => {
+            let mut sessions_writer = sessions.write().await;
+            let session = sessions_writer
+                .entry(session_id)
+                .or_insert_with(Session::default);
+            let connections_reader = connections.read().await;
 
-                        // start connections with all already present users
-                        for client_id in &session.users {
-                            {
-                                let host_tx = connections_reader
-                                    .get(&sender_id)
-                                    .expect("host not in connections");
-                                let host_response =
-                                    SignalMessage::SessionReady(session_id, *client_id);
-                                let host_response = serde_json::to_string(&host_response)?;
-                                host_tx
-                                    .send(Message::Text(host_response))
-                                    .expect("failed to send SessionReady message to host");
-                            }
-                        }
-                        session.users.insert(sender_id);
-                    }
-                    // pass offer to the other user in session without changing anything
-                    SignalMessage::SdpOffer(session_id, recipient_id, offer) => {
-                        let response = SignalMessage::SdpOffer(session_id, sender_id, offer);
-                        let response = serde_json::to_string(&response)?;
-                        let connections_reader = connections.read().await;
-                        if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::Text(response))?;
-                        } else {
-                            warn!("tried to send offer to non existing user");
-                        }
-                    }
-                    // pass answer to the other user in session without changing anything
-                    SignalMessage::SdpAnswer(session_id, recipient_id, answer) => {
-                        let response = SignalMessage::SdpAnswer(session_id, sender_id, answer);
-                        let response = serde_json::to_string(&response)?;
-                        let connections_reader = connections.read().await;
-                        if let Some(recipient_tx) = connections_reader.get(&recipient_id) {
-                            recipient_tx.send(Message::Text(response))?;
-                        } else {
-                            warn!("tried to send offer to non existing user");
-                        }
-                    }
-                    SignalMessage::IceCandidate(session_id, recipient_id, candidate) => {
-                        let response =
-                            SignalMessage::IceCandidate(session_id, sender_id, candidate);
-                        let response = serde_json::to_string(&response)?;
-                        let connections_reader = connections.read().await;
-                        let recipient_tx = connections_reader
-                            .get(&recipient_id)
-                            .ok_or_else(|| anyhow!("no sender for given id"))?;
-
-                        recipient_tx.send(Message::Text(response))?;
-                    }
-                    _ => {}
+            // start connections with all already present users
+            for client_id in &session.users {
+                {
+                    let host_response = SignalMessage::SessionReady(session_id, *client_id);
+                    let host_response = rmp_serde::to_vec(&host_response)?;
+                    connections_reader
+                        .get(&sender_id)
+                        .ok_or(anyhow!("host not in connections"))?
+                        .send(Message::Binary(host_response))?;
                 }
             }
-            Err(error) => {
-                error!("An error occurred: {:?}", error);
-            }
+            session.users.insert(sender_id);
+        }
+        // pass offer to the other user in session without changing anything
+        SignalMessage::SdpOffer(session_id, recipient_id, offer) => {
+            let response = SignalMessage::SdpOffer(session_id, sender_id, offer);
+            let response = rmp_serde::to_vec(&response)?;
+            let connections_reader = connections.read().await;
+            connections_reader
+                .get(&recipient_id)
+                .ok_or(anyhow!("tried to send offer to non existing user"))?
+                .send(Message::Binary(response))?;
+        }
+        // pass answer to the other user in session without changing anything
+        SignalMessage::SdpAnswer(session_id, recipient_id, answer) => {
+            let response = SignalMessage::SdpAnswer(session_id, sender_id, answer);
+            let response = rmp_serde::to_vec(&response)?;
+            let connections_reader = connections.read().await;
+            connections_reader
+                .get(&recipient_id)
+                .ok_or(anyhow!("tried to send answer to non existing user"))?
+                .send(Message::Binary(response))?;
+        }
+        SignalMessage::IceCandidate(session_id, recipient_id, candidate) => {
+            let response = SignalMessage::IceCandidate(session_id, sender_id, candidate);
+            let response = rmp_serde::to_vec(&response)?;
+            let connections_reader = connections.read().await;
+            connections_reader
+                .get(&recipient_id)
+                .ok_or(anyhow!("tried to send ice candidate to non existing user"))?
+                .send(Message::Binary(response))?;
+        }
+        SignalMessage::SessionReady(session_id, recipient_id) => {
+            let response = SignalMessage::SessionReady(session_id, sender_id);
+            let response = rmp_serde::to_vec(&response)?;
+            let connections_reader = connections.read().await;
+            connections_reader
+                .get(&recipient_id)
+                .ok_or(anyhow!("tried to send ready message to non existing user"))?
+                .send(Message::Binary(response))?;
+        }
+        SignalMessage::Error(session_id, recipient_id, error) => {
+            warn!(
+                "error message received from user {:?}: {:?}",
+                sender_id, error
+            );
+            let response = SignalMessage::Error(session_id, sender_id, error);
+            let response = rmp_serde::to_vec(&response)?;
+            let connections_reader = connections.read().await;
+            connections_reader
+                .get(&recipient_id)
+                .ok_or(anyhow!("tried to send ready message to non existing user"))?
+                .send(Message::Binary(response))?;
         }
     }
     Ok(())

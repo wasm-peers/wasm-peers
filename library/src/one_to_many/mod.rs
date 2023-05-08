@@ -90,9 +90,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use anyhow::anyhow;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use wasm_peers_protocol::{SessionId, UserId};
 use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
 
+use crate::constants::DEFAULT_MAX_RETRANSMITS;
 use crate::one_to_many::callbacks::{set_websocket_on_message, set_websocket_on_open};
 use crate::ConnectionType;
 
@@ -158,10 +161,23 @@ impl NetworkManager {
         })
     }
 
-    pub fn start(
+    pub fn start<T: DeserializeOwned>(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
-        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
+    ) {
+        self.start_with_retransmits(
+            DEFAULT_MAX_RETRANSMITS,
+            on_open_callback,
+            on_message_callback,
+        );
+    }
+
+    pub fn start_with_retransmits<T: DeserializeOwned>(
+        &mut self,
+        max_retransmits: u16,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     ) {
         let websocket = self.inner.borrow().websocket.clone();
         let session_id = self.inner.borrow().session_id;
@@ -171,6 +187,7 @@ impl NetworkManager {
         set_websocket_on_message(
             &websocket,
             self.clone(),
+            max_retransmits,
             on_open_callback,
             on_message_callback,
             is_host,
@@ -183,7 +200,12 @@ impl NetworkManager {
     /// This function can err if:
     /// - sending of the message was tried before data channel was established or,
     /// - sending of the message failed.
-    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
+    pub fn send_message<T: Serialize + ?Sized>(
+        &self,
+        user_id: UserId,
+        message: &T,
+    ) -> crate::Result<()> {
+        let message = rmp_serde::to_vec(message)?;
         self.inner
             .borrow()
             .connections
@@ -192,11 +214,8 @@ impl NetworkManager {
             .data_channel
             .as_ref()
             .ok_or_else(|| anyhow!("no data channel setup yet for user {}", user_id))?
-            // this is an ugly fix to the fact, that if you send empty string as message
-            // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-            // message
-            .send_with_str(&format!("x{}", message))
-            .map_err(|err| anyhow!("failed to send message across the websocket: {:?}", err))
+            .send_with_u8_array(&message)
+            .map_err(|err| anyhow!("failed to send string: {:?}", err))
     }
 
     /// Send message to a all connected client-users.
@@ -207,7 +226,8 @@ impl NetworkManager {
     /// Otherwise it will result in an error:
     /// - if sending of the message was tried before data channel was established or,
     /// - if sending of the message failed.
-    pub fn send_message_to_all(&self, message: &str) {
+    pub fn send_message_to_all<T: Serialize + ?Sized>(&self, message: &T) -> crate::Result<()> {
+        let message = rmp_serde::to_vec(message)?;
         for data_channel in self
             .inner
             .borrow()
@@ -216,12 +236,9 @@ impl NetworkManager {
             .filter_map(|connection| connection.data_channel.as_ref())
         {
             // TODO(tkarwowski): some may fail, should we return a list results?
-            let _result = data_channel
-                // this is an ugly fix to the fact, that if you send empty string as message
-                // webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-                // message
-                .send_with_str(&format!("x{}", message));
+            let _result = data_channel.send_with_u8_array(&message);
         }
+        Ok(())
     }
 }
 
@@ -266,12 +283,22 @@ impl MiniServer {
     /// Requires specifying a callbacks that are guaranteed to run
     /// when the connection opens and on each message received.
     /// It takes [`UserId`] as an argument which helps identify which client-peer.
-    pub fn start(
+    pub fn start<T: DeserializeOwned>(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
-        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     ) {
         self.inner.start(on_open_callback, on_message_callback);
+    }
+
+    pub fn start_with_retransmits<T: DeserializeOwned>(
+        &mut self,
+        max_retransmits: u16,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
+    ) {
+        self.inner
+            .start_with_retransmits(max_retransmits, on_open_callback, on_message_callback);
     }
 
     /// Sends message over established data channel with a single client-peer represented by
@@ -283,13 +310,24 @@ impl MiniServer {
     /// Otherwise it will result in an error:
     /// - if sending of the message was tried before data channel was established or,
     /// - if sending of the message failed.
-    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
+    pub fn send_message<T: Serialize + ?Sized>(
+        &self,
+        user_id: UserId,
+        message: &T,
+    ) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
 
     /// Convenience function that sends the same message to all connected client-peers.
-    pub fn send_message_to_all(&self, message: &str) {
-        self.inner.send_message_to_all(message);
+    ///
+    /// # Errors
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
+    pub fn send_message_to_all<T: Serialize + ?Sized>(&self, message: &T) -> crate::Result<()> {
+        self.inner.send_message_to_all(message)
     }
 }
 
@@ -315,15 +353,27 @@ impl MiniClient {
         })
     }
 
-    /// Same as [`MiniServer::start`], but callbacks don't take `UserId` argument, as it will always be host.
-    pub fn start(
+    pub fn start<T: DeserializeOwned>(
         &mut self,
         mut on_open_callback: impl FnMut() + Clone + 'static,
-        mut on_message_callback: impl FnMut(String) + Clone + 'static,
+        mut on_message_callback: impl FnMut(T) + Clone + 'static,
     ) {
         let on_open_callback = move |_| on_open_callback();
         let on_message_callback = move |_, message| on_message_callback(message);
         self.inner.start(on_open_callback, on_message_callback);
+    }
+
+    /// Same as [`MiniServer::start`], but callbacks don't take `UserId` argument, as it will always be host.
+    pub fn start_with_retransmits<T: DeserializeOwned>(
+        &mut self,
+        max_retransmits: u16,
+        mut on_open_callback: impl FnMut() + Clone + 'static,
+        mut on_message_callback: impl FnMut(T) + Clone + 'static,
+    ) {
+        let on_open_callback = move |_| on_open_callback();
+        let on_message_callback = move |_, message| on_message_callback(message);
+        self.inner
+            .start_with_retransmits(max_retransmits, on_open_callback, on_message_callback);
     }
 
     /// Way of communicating with peer-server
@@ -338,9 +388,7 @@ impl MiniClient {
     /// Otherwise it will result in an error:
     /// - if sending of the message was tried before data channel was established or,
     /// - if sending of the message failed.
-    pub fn send_message_to_host(&self, message: &str) -> crate::Result<()> {
-        self.inner.send_message_to_all(message);
-        // TODO(tkarwowski): we always return success, but this is subject to change
-        Ok(())
+    pub fn send_message_to_host<T: Serialize + ?Sized>(&self, message: &T) -> crate::Result<()> {
+        self.inner.send_message_to_all(message)
     }
 }

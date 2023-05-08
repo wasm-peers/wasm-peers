@@ -56,9 +56,12 @@ use std::rc::Rc;
 
 use anyhow::anyhow;
 use log::debug;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use wasm_peers_protocol::SessionId;
-use web_sys::{RtcDataChannel, RtcPeerConnection, WebSocket};
+use web_sys::{RtcDataChannel, RtcDataChannelInit, RtcPeerConnection, WebSocket};
 
+use crate::constants::DEFAULT_MAX_RETRANSMITS;
 use crate::one_to_one::callbacks::{
     set_data_channel_on_error, set_data_channel_on_message, set_data_channel_on_open,
     set_peer_connection_on_data_channel, set_peer_connection_on_ice_candidate,
@@ -137,10 +140,24 @@ impl NetworkManager {
     /// Second part of the setup that begins the actual connection.
     /// Requires specifying a callbacks that are guaranteed to run
     /// when the connection opens and on each message received.
-    pub fn start(
+
+    pub fn start<T: DeserializeOwned>(
         &mut self,
         on_open_callback: impl FnMut() + Clone + 'static,
-        on_message_callback: impl FnMut(String) + Clone + 'static,
+        on_message_callback: impl FnMut(T) + Clone + 'static,
+    ) {
+        self.start_with_retransmits(
+            DEFAULT_MAX_RETRANSMITS,
+            on_open_callback,
+            on_message_callback,
+        );
+    }
+
+    pub fn start_with_retransmits<T: DeserializeOwned>(
+        &mut self,
+        max_retransmits: u16,
+        on_open_callback: impl FnMut() + Clone + 'static,
+        on_message_callback: impl FnMut(T) + Clone + 'static,
     ) {
         let NetworkManagerInner {
             websocket,
@@ -149,7 +166,12 @@ impl NetworkManager {
             ..
         } = self.inner.borrow().clone();
 
-        let data_channel = peer_connection.create_data_channel(&session_id.to_string());
+        let mut init = RtcDataChannelInit::new();
+        init.max_retransmits(max_retransmits);
+        init.ordered(false);
+
+        let data_channel = peer_connection
+            .create_data_channel_with_data_channel_dict(&session_id.to_string(), &init);
         debug!(
             "data_channel created with label: {:?}",
             data_channel.label()
@@ -193,27 +215,10 @@ impl NetworkManager {
     /// Otherwise it will result in an error:
     /// - if sending of the message was tried before data channel was established or,
     /// - if sending of the message failed.
-    pub fn send_message(&self, message: &str) -> crate::Result<()> {
-        debug!("server will try to send a message: {:?}", &message);
-        // FIXME(tkarwowski): this is an ugly fix to the fact, that if you send empty string as message
-        //  webrtc fails with a cryptic "The operation failed for an operation-specific reason"
-        //  message
+    pub fn send_message<T: Serialize + ?Sized>(&self, message: &T) -> crate::Result<()> {
+        let message = rmp_serde::to_vec(message)?;
         self.datachannel()?
-            .send_with_str(&format!("x{message}"))
+            .send_with_u8_array(&message)
             .map_err(|err| anyhow!("failed to send string: {:?}", err))
-    }
-
-    /// Same as [`NetworkManager::send_message`], but allows to send byte array
-    ///
-    /// # Errors
-    /// It might fail if the connection is not yet set up
-    /// and thus should only be called after `on_open_callback` triggers.
-    /// Otherwise it will result in an error:
-    /// - if sending of the message was tried before data channel was established or,
-    /// - if sending of the message failed.
-    pub fn send_u8_array(&self, message: &[u8]) -> crate::Result<()> {
-        self.datachannel()?
-            .send_with_u8_array(message)
-            .map_err(|err| anyhow!("failed to send u8 array: {:?}", err))
     }
 }
