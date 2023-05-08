@@ -84,6 +84,7 @@ and [many-to-many] that creates connection for each pair of peers and allows sen
     clippy::verbose_file_reads
 )]
 
+pub(crate) mod constants;
 mod error;
 #[cfg(feature = "many-to-many")]
 pub mod many_to_many;

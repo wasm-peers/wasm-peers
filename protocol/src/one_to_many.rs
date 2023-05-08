@@ -29,5 +29,5 @@ pub enum SignalMessage {
     IceCandidate(SessionId, UserId, IceCandidate),
 
     /// Generic error containing detailed information about the cause
-    Error(SessionId, String),
+    Error(SessionId, UserId, String),
 }

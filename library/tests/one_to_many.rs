@@ -22,7 +22,7 @@ fn network_manager_starts_successfully() {
         ConnectionType::Local,
     )
     .unwrap();
-    server.start(|_| {}, |_, _| {});
+    server.start(|_| {}, |_, _: ()| {});
 }
 
 #[wasm_bindgen_test]
@@ -44,12 +44,14 @@ fn single_message_passes_both_ways() {
             console::log_1(&format!("connection to user established: {:?}", user_id).into());
             *server_open_connections_count.borrow_mut() += 1;
             if *server_open_connections_count.borrow() == 2 {
-                server_clone.send_message_to_all("ping!");
+                server_clone
+                    .send_message_to_all(&"ping!".to_owned())
+                    .unwrap();
             }
         }
     };
     let server_on_message = {
-        move |user_id, message| {
+        move |user_id, message: String| {
             console::log_1(
                 &format!(
                     "server received message from client {:?}: {}",
@@ -73,9 +75,11 @@ fn single_message_passes_both_ways() {
         let client_clone = client.clone();
         let client_on_message = {
             let client_received_message = client_received_message.clone();
-            move |message| {
+            move |message: String| {
                 console::log_1(&format!("client received message: {}", message).into());
-                client_clone.send_message_to_host("pong!").unwrap();
+                client_clone
+                    .send_message_to_host(&"pong!".to_owned())
+                    .unwrap();
                 *client_received_message.borrow_mut() = true;
             }
         };

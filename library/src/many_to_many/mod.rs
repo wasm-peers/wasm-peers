@@ -65,6 +65,8 @@ peer_generator();
 ```
  */
 
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use wasm_peers_protocol::{SessionId, UserId};
 
 use crate::one_to_many::NetworkManager as OneToManyNetworkManager;
@@ -116,12 +118,22 @@ impl NetworkManager {
     /// Requires specifying a callbacks that are guaranteed to run
     /// when a new connection opens and on each message received.
     /// It takes [`UserId`] as an argument which helps identify sending peer.
-    pub fn start(
+    pub fn start<T: DeserializeOwned>(
         &mut self,
         on_open_callback: impl FnMut(UserId) + Clone + 'static,
-        on_message_callback: impl FnMut(UserId, String) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
     ) {
         self.inner.start(on_open_callback, on_message_callback);
+    }
+
+    pub fn start_with_retransmits<T: DeserializeOwned>(
+        &mut self,
+        max_retransmits: u16,
+        on_open_callback: impl FnMut(UserId) + Clone + 'static,
+        on_message_callback: impl FnMut(UserId, T) + Clone + 'static,
+    ) {
+        self.inner
+            .start_with_retransmits(max_retransmits, on_open_callback, on_message_callback);
     }
 
     /// Sends message over established data channel to a single peer represented by
@@ -133,12 +145,23 @@ impl NetworkManager {
     /// Otherwise it will result in an error:
     /// - if sending of the message was tried before data channel was established or,
     /// - if sending of the message failed.
-    pub fn send_message(&self, user_id: UserId, message: &str) -> crate::Result<()> {
+    pub fn send_message<T: Serialize + ?Sized>(
+        &self,
+        user_id: UserId,
+        message: &T,
+    ) -> crate::Result<()> {
         self.inner.send_message(user_id, message)
     }
 
-    /// Convenience method that sends the same message to all connected peers.
-    pub fn send_message_to_all(&self, message: &str) {
-        self.inner.send_message_to_all(message);
+    /// Send message to a all connected client-users.
+    ///
+    /// # Errors
+    /// It might fail if the connection is not yet set up
+    /// and thus should only be called after `on_open_callback` triggers.
+    /// Otherwise it will result in an error:
+    /// - if sending of the message was tried before data channel was established or,
+    /// - if sending of the message failed.
+    pub fn send_message_to_all<T: Serialize + ?Sized>(&self, message: &T) -> crate::Result<()> {
+        self.inner.send_message_to_all(message)
     }
 }
