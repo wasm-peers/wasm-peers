@@ -86,34 +86,35 @@ jobs:
           command: doc
           args: --no-deps --document-private-items --all-features --workspace --examples
 
-  publish-dry-run:
-    name: Publish dry run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - uses: Swatinem/rust-cache@v2
-      - name: Publish dry-run of wasm-peers crate
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: -p wasm-peers --dry-run
-      - name: Publish dry-run of wasm-peers-protocol crate
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: -p wasm-peers-protocol --dry-run
-      - name: Publish dry-run of wasm-peers-signaling-server crate
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: -p wasm-peers-signaling-server --dry-run
+# # It fails on breaking changes, as wasm-peers and wasm-peers-signaling-server depend on crates.io version of wasm-peers-protocol.
+  # publish-dry-run:
+  #   name: Publish dry run
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #     - name: Install Rust toolchain
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         profile: minimal
+  #         override: true
+  #     - uses: Swatinem/rust-cache@v2
+  #     - name: Publish dry-run of wasm-peers crate
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: publish
+  #         args: -p wasm-peers --dry-run
+  #     - name: Publish dry-run of wasm-peers-protocol crate
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: publish
+  #         args: -p wasm-peers-protocol --dry-run
+  #     - name: Publish dry-run of wasm-peers-signaling-server crate
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: publish
+  #         args: -p wasm-peers-signaling-server --dry-run
 
   coverage:
     name: Code coverage
