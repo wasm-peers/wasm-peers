@@ -2,7 +2,7 @@ use std::env;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use wasm_peers_signaling_server::router::{self, ServerState};
 
@@ -22,6 +22,8 @@ async fn main() -> anyhow::Result<()> {
         .nth(1)
         .unwrap_or_else(|| "0.0.0.0:9001".to_string());
     let address = SocketAddr::from_str(&address)?;
+
+    info!("Listening on: http://{}", address);
 
     axum::Server::bind(&address)
         .serve(app.into_make_service())
