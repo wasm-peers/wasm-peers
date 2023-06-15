@@ -56,8 +56,8 @@ async fn many_to_many_handler(State(state): State<ServerState>, ws: WebSocketUpg
 pub fn create(server_state: ServerState) -> Router {
     Router::new()
         .route("/health", get(health_handler))
-        .route("/one_to_one", get(one_to_one_handler))
-        .route("/one_to_many", get(one_to_many_handler))
-        .route("/many_to_many", get(many_to_many_handler))
+        .route("/one-to-one", get(one_to_one_handler))
+        .route("/one-to-many", get(one_to_many_handler))
+        .route("/many-to-many", get(many_to_many_handler))
         .with_state(server_state)
 }
