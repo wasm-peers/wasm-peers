@@ -2,14 +2,11 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
   workflow_dispatch:
 
 jobs:
   test:
-    name: Test Suite
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,11 +19,10 @@ jobs:
           override: true
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo install just wasm-pack
-          just test
+          cargo xtask test
 
-  rustfmt:
-    name: Rustfmt
+  formating:
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,16 +30,13 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           profile: minimal
           override: true
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: |
+          cargo xtask fmt
 
   clippy:
     name: Clippy
@@ -59,11 +52,8 @@ jobs:
           override: true
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Clippy check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features --workspace -- -D warnings
+      - run: |
+          cargo xtask clippy
 
   docs:
     name: Docs
@@ -78,15 +68,10 @@ jobs:
           profile: minimal
           override: true
       - uses: Swatinem/rust-cache@v2
-      - name: Check documentation
-        env:
-          RUSTDOCFLAGS: -D warnings
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --no-deps --document-private-items --all-features --workspace --examples
+      - run: |
+          cargo xtask doc
 
-# # It fails on breaking changes, as wasm-peers and wasm-peers-signaling-server depend on crates.io version of wasm-peers-protocol.
+  # # It fails on breaking changes, as wasm-peers and wasm-peers-signaling-server depend on crates.io version of wasm-peers-protocol.
   # publish-dry-run:
   #   name: Publish dry run
   #   runs-on: ubuntu-latest
