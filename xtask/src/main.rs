@@ -17,6 +17,7 @@ struct Cli {
 enum Command {
     Fmt,
     Check,
+    Clippy,
     Run,
     Test,
     Doc,
@@ -35,6 +36,7 @@ fn main() -> Result<()> {
     match &cli.command {
         Command::Fmt => fmt(&sh)?,
         Command::Check => check(&sh)?,
+        Command::Clippy => clippy(&sh)?,
         Command::Run => run(&sh)?,
         Command::Test => test(&sh)?,
         Command::Doc => doc(&sh)?,
@@ -51,6 +53,10 @@ fn fmt(sh: &Shell) -> Result<()> {
 }
 
 fn check(sh: &Shell) -> Result<()> {
+    Ok(cmd!(sh, "cargo check --all-targets --all-features --workspace").run()?)
+}
+
+fn clippy(sh: &Shell) -> Result<()> {
     Ok(cmd!(sh, "cargo clippy --all-targets --all-features --workspace").run()?)
 }
 
@@ -60,8 +66,8 @@ fn run(sh: &Shell) -> Result<()> {
 
 fn test(sh: &Shell) -> Result<()> {
     cmd!(sh, "cargo build --package wasm-peers-signaling-server").run()?;
-    let mut server = process::Command::new("wasm-peers-signaling-server")
-        .current_dir(project_root::get_project_root()?.join("target/debug/"))
+    let mut server = process::Command::new("./target/debug/wasm-peers-signaling-server")
+        .current_dir(project_root::get_project_root()?)
         .spawn()?;
 
     let result = || -> Result<()> {
