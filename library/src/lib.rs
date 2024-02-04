@@ -14,8 +14,7 @@ After that you can send messages back and forth without worrying about the imple
 
 Library contains three network , [one-to-one](one_to_one), which creates an equal connection between two peers,
 [one-to-many](one_to_many), which specifies a host and arbitrary number of clients
-and [many-to-many] that creates connection for each pair of peers and allows sending messages to any of them.
-
+and [many-to-many](many_to_many) that creates connection for each pair of peers and allows sending messages to any of them.
 */
 
 #![allow(
@@ -43,7 +42,7 @@ and [many-to-many] that creates connection for each pair of peers and allows sen
 // clippy WARN level lints, that can be upgraded to DENY if preferred
 #![warn(
     clippy::float_arithmetic,
-    clippy::integer_arithmetic,
+    clippy::arithmetic_side_effects,
     clippy::modulo_arithmetic,
     clippy::as_conversions,
     clippy::assertions_on_result_states,

@@ -27,7 +27,7 @@ const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 let peer_generator = || {
     let mut peer = NetworkManager::new(
         SIGNALING_SERVER_URL,
-        SessionId::new("dummy-session-id".to_string()),
+        SessionId::new(1),
         ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
     )
     .expect("failed to connect to signaling server");
@@ -36,7 +36,7 @@ let peer_generator = || {
         let peer = peer.clone();
         move |user_id| {
             console::log_1(&format!("connection to peer established: {:?}", user_id).into());
-            if let Err(err) = peer_clone.send_message(user_id, "ping!") {
+            if let Err(err) = peer.send_message(user_id, "ping!") {
                 console::log_1(&format!("failed to send message: {:?}", err).into());
             }
         }
@@ -44,7 +44,7 @@ let peer_generator = || {
 
     let peer_on_message = {
         let peer = peer.clone();
-        move |user_id, message| {
+        move |user_id, message: String| {
             console::log_1(
                 &format!(
                     "peer received message from other peer {:?}: {}",
@@ -52,7 +52,7 @@ let peer_generator = || {
                 )
                 .into(),
             );
-            if let Err(err) = peer_clone.send_message(user_id, "pong!") {
+            if let Err(err) = peer.send_message(user_id, &"pong!".to_owned()) {
                 console::log_1(&format!("failed to send message: {:?}", err).into());
             }
         }

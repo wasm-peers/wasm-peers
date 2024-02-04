@@ -1,10 +1,8 @@
-FROM rust:1.69.0 AS chef
+FROM rust:1.75.0 AS chef
 RUN cargo install cargo-chef
 WORKDIR /usr/src/signaling-server
 
 FROM chef AS planner
-# Copy the folders seperatly to improve layer caching,
-# folders go from least to most likely to change.
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -14,8 +12,6 @@ COPY --from=planner /usr/src/signaling-server/recipe.json recipe.json
 # RUN cargo chef cook --release --recipe-path recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
-# Copy the folders seperatly to improve layer caching,
-# folders go from least to most likely to change.
 COPY . .
 
 # This is the actual application build.
