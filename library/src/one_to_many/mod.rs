@@ -30,7 +30,7 @@ const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
 let mut server = MiniServer::new(
     SIGNALING_SERVER_URL,
-    SessionId::new("dummy-session-id".to_string()),
+    SessionId::new(1),
     ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
 )
 .unwrap();
@@ -48,7 +48,7 @@ let server_on_open = {
     }
 };
 let server_on_message = {
-    move |user_id, message| {
+    move |user_id, message: &str| {
         console::log_1(
             &format!(
                 "server received message from client {:?}: {}",
@@ -63,7 +63,7 @@ server.start(server_on_open, server_on_message);
 let client_generator = || {
     let mut client = MiniClient::new(
         SIGNALING_SERVER_URL,
-        SessionId::new("dummy-session-id".to_string()),
+        SessionId::new(1),
         ConnectionType::Stun { urls: STUN_SERVER_URL.to_string() },
     )
     .unwrap();

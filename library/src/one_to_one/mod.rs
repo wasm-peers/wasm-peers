@@ -16,7 +16,7 @@ use web_sys::console;
 const SIGNALING_SERVER_URL: &str = "ws://0.0.0.0:9001/one-to-one";
 const STUN_SERVER_URL: &str = "stun:openrelay.metered.ca:80";
 
-let session_id = SessionId::new("some-session-id".to_string());
+let session_id = SessionId::new(1);
 let mut peer1 = NetworkManager::new(
     SIGNALING_SERVER_URL,
     session_id.clone(),
@@ -31,7 +31,7 @@ let peer1_on_message = {
         console::log_1(&format!("peer1 received message: {}", message).into());
     }
 };
-peer1.start(peer1_on_open, peer1_on_message).unwrap();
+peer1.start(peer1_on_open, peer1_on_message);
 
 let mut peer2 = NetworkManager::new(
     SIGNALING_SERVER_URL,
@@ -47,7 +47,7 @@ let peer2_on_message = {
         peer2_clone.send_message("pong!").unwrap();
     }
 };
-peer2.start(peer2_on_open, peer2_on_message).unwrap();
+peer2.start(peer2_on_open, peer2_on_message);
 ```
 */
 
