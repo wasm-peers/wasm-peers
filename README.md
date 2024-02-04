@@ -1,6 +1,6 @@
 # wasm-peers
 
-<img style="display: block; margin-left: auto; margin-right: auto" src="logo.png" alt="wasm-peers logo">
+![wasm-peers logo](logo.png)
 
 [![crates.io](https://img.shields.io/crates/v/wasm_peers.svg)](https://crates.io/crates/wasm_peers)
 [![docs.rs](https://img.shields.io/docsrs/wasm-peers)](https://docs.rs/wasm_peers)
@@ -113,8 +113,8 @@ defined in the Apache-2.0 license, shall be dual licensed as above, without any 
 
 ## Authors
 
-Tomasz Karwowski
-[LinkedIn](https://www.linkedin.com/in/tomek-karwowski/)
+Tom Karwowski
+[LinkedIn](https://www.linkedin.com/in/tomkarw/)
 
 ## Acknowledgments
 

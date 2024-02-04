@@ -1,4 +1,4 @@
-name: CI
+name: ci
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    name: Test
+    name: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,7 +25,7 @@ jobs:
           cargo xtask test
 
   formating:
-    name: Formatting
+    name: formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -42,7 +42,7 @@ jobs:
           cargo xtask fmt
 
   clippy:
-    name: Clippy
+    name: clippy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -59,7 +59,7 @@ jobs:
           cargo xtask clippy
 
   docs:
-    name: Docs
+    name: docs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -105,7 +105,7 @@ jobs:
   #         args: -p wasm-peers-signaling-server --dry-run
 
   coverage:
-    name: Code coverage
+    name: code coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
